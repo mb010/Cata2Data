@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.units import Quantity
 from typing import Any, Callable, Optional, List, Union, Tuple, Dict
 from astropy.nddata import Cutout2D
 import os
@@ -16,7 +17,7 @@ class CataData:
         catalogue_paths: Union[List[str], str],
         image_paths: Union[List[str], str],
         field_names: Union[List[Union[int, int]], str],
-        cutout_width: int = 32,
+        cutout_width: int | Quantity = 32,
         memmap: bool = False,
         polarisation: bool = False,
         transform: Optional[Callable] = None,
@@ -105,7 +106,7 @@ class CataData:
         # https://docs.astropy.org/en/stable/nddata/utils.html#cutout-images
         # https://docs.astropy.org/en/stable/api/astropy.nddata.Cutout2D.html
         positions = self.wcs[field].all_world2pix(coords, self.origin)
-        images = []
+        cutouts = []
         wcs = []
         for x, y in positions:
             cutout = Cutout2D(
