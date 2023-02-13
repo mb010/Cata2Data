@@ -1,7 +1,7 @@
 # Cata2Data
 Use FITS catalogues, FITS image data and astropy to manipulate your data into a dynamically read data set!
 
-See the [example notebook](https://github.com/mb010/Cata2Data/blob/main/example.ipynb) to see how you can easily load in a number of data sets into a dynamically memory loaded iterable data set.
+See the [example.ipynb notebook](https://github.com/mb010/Cata2Data/blob/main/example.ipynb) to see how you can easily load in a number of data sets into a dynamically memory loaded iterable data set.
 
 # Installation
 With this package at `ROOT_PATH/Cata2Data` on your deveice, install using pip:
