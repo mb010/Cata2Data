@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.units import Quantity
+import astropy.units as units
+from astropy.coordinates import SkyCoord
 from typing import Any, Callable, Optional, List, Union, Tuple, Dict
 from astropy.nddata import Cutout2D
 import os
@@ -131,15 +133,21 @@ class CataData:
         ### Currently using:
         # https://docs.astropy.org/en/stable/nddata/utils.html#cutout-images
         # https://docs.astropy.org/en/stable/api/astropy.nddata.Cutout2D.html
-        positions = self.wcs[field].all_world2pix(
-            coords, self.origin
-        )  # Could replace with SkyCoord object.
+        # positions = self.wcs[field].all_world2pix(
+        #    coords, self.origin
+        # )  # Could replace with SkyCoord object.
+
+        skycoord_coordinates = SkyCoord(
+            ra=coords[:, 0] * units.deg,
+            dec=coords[:, 1] * units.deg,
+            frame=self.wcs[field].to_header()["RADESYS"].lower(),
+        )
         cutouts = []
         wcs = []
-        for position in positions:
+        for coord in skycoord_coordinates:
             cutout = Cutout2D(
                 self.images[field],
-                position,
+                coord,
                 (self.cutout_width, self.cutout_width),
                 wcs=self.wcs[field],
                 mode="partial",
