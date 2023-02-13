@@ -118,25 +118,26 @@ class CataData:
             )
             if return_wcs:
                 wcs.append(cutout.wcs)
-            images.append(cutout.data)
-            # images.append(self.index_cutout(int(x), int(y), field))
+            cutouts.append(cutout.data)
         if return_wcs:
-            return np.stack(images), wcs
-        return np.stack(images)
+            return np.stack(cutouts), wcs
+        return np.stack(cutouts)
 
-    def index_cutout(self, x: int, y: int, field: Union[str, int]) -> np.ndarray:
-        """Returns a cutout based on specific integer
-        indices and a field identifier."""
-        image_ = self.images[field]
-        cutout = np.squeeze(
-            image_[
-                y - self.cutout_width // 2 : y + self.cutout_width // 2,
-                x - self.cutout_width // 2 : x + self.cutout_width // 2,
-            ]
-        )
-        if len(cutout.shape) < 3:
-            cutout = cutout[np.newaxis, :, :]
-        return cutout
+    def save_cutout(path: str, index: int, format: str = "fits") -> None:
+        """Saves the cutout of the respective index.
+        Args:
+            path (str): Path which the file should be saved to.
+            index (int): Catalogue index used to produce cutout.
+            format (str): File out type. Defaults to 'fits' (coordinate system corrected header).
+        """
+        cutout, wcs = self.__getitem__(index, return_wcs=True)
+        wcs = wcs[0]  # unpack extract dimension
+        cutout = cutout[0]
+        if format == "fits":
+            fits.writeto(path, data=cutout, header=wcs.to_header())
+        else:
+            raise NotImplementedError("Currently only fits format supported.")
+        return
 
     def plot(self, index: int) -> None:
         """Plot the source with the given idx."""
