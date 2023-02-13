@@ -33,11 +33,11 @@ class CataData:
         and fits images.
 
         Args:
-            catalogue_paths (list[str] | str):
+            catalogue_paths (List[str] | str):
                 Fits catalogue path(s) in matching order.
-            image_paths (list[str] | str):
+            image_paths (List[str] | str):
                 Fits image path(s) in matching order.
-            field_names (list[str  |  int] | str):
+            field_names (List[str  |  int] | str):
                 Names of the field(s) in matching order.
             cutout_width (int, optional):
                 Cut out pixel width. Defaults to 32.
@@ -55,7 +55,7 @@ class CataData:
                 Function applied to the astropy wcs object before selecting data from the images. Defaults to None.
             fits_index_catalogue (int, optional): Index used in self.open_fits call. Selects correct wcs entry for respective catalogues. Ordered appropriately with paths. Defaults to 1.
             fits_index_images (int, optional): Index used in self.open_fits call. Selects correct wcs entry for respective images. Ordered appropriately with paths. Defaults to 0.
-            image_drop_axes (list[int], optional): Not Implemented. Defaults to [3,2].
+            image_drop_axes (List[int], optional): Not Implemented. Defaults to [3,2].
             origin (int, optional): Wcs origin. Used in cutout to calculated wcs.world2pix coords. Defaults to 1.
         """
         self.catalogue_paths = (
@@ -86,6 +86,18 @@ class CataData:
         self.images, self.wcs = self._build_images(image_drop_axes)
 
     def __getitem__(self, index: int, return_wcs=False) -> np.ndarray:
+        """Gets the respective indexed item within the data set. Indexes from the built catalogue data frame.
+
+        Args:
+            index (int): Index of item to retrieve.
+            return_wcs (bool, optional): Whether to return coordinates of object (returns as list of coordinates of length one). Defaults to False.
+
+        Raises:
+            ValueError: If index is larger than the size of the data set.
+
+        Returns:
+            np.ndarray: Cutout image with indexed coordinates at centre of the cutout (batch dimension first).
+        """
         if index >= self.__len__():
             raise ValueError(f"Index out of range.")
         coords = self.df.iloc[index : index + 1][["RA", "DEC"]].values
@@ -94,6 +106,11 @@ class CataData:
         return self.cutout(coords, field=field, return_wcs=return_wcs)
 
     def __len__(self) -> int:
+        """Returns the length of the processed catalogue. Necessary for pytorch dataloaders.
+
+        Returns:
+            int: Data set length.
+        """
         return len(self.df)
 
     def cutout(
@@ -101,6 +118,14 @@ class CataData:
     ) -> Union[tuple, np.ndarray]:
         """Produces a set of images based on the provided
         coordinates and field.
+
+        Args:
+            coords (np.ndarray): Source coordinates.
+            field (Union[str, int]): Field name or number.
+            return_wcs (bool, optional): Whether to return the coordinate objects of the cutouts. Defaults to False.
+
+        Returns:
+            Union[tuple, np.ndarray]: Cutouts and coordinates (WCS) or cutouts.
         """
         ### Currently using:
         # https://docs.astropy.org/en/stable/nddata/utils.html#cutout-images
@@ -141,7 +166,11 @@ class CataData:
         return
 
     def plot(self, index: int) -> None:
-        """Plot the source with the given idx."""
+        """Plot the source with the given index.
+
+        Args:
+            index (int): Index of the source to plot.
+        """
         crosshair_alpha = 0.3
         image, wcs = self.__getitem__(index, return_wcs=True)
         image = np.squeeze(image[0])
@@ -177,6 +206,10 @@ class CataData:
     def _build_df(self) -> pd.DataFrame:
         """Generates a single dataframe for all input data.
         Data is separated by provided field names for easier sampling.
+        catalogue_preprocessing is called on the data here.
+
+        Returns:
+            pd.DataFrame: Single processed data frame constructed through the provided catalogue paths and field names (i.e. catalogue / imgae pair names).
         """
         df = []
         for catalogue_path, field in zip(self.catalogue_paths, self.field_names):
@@ -194,7 +227,14 @@ class CataData:
     def _build_images(
         self, drop_axes: List[int]
     ) -> Tuple[Dict[Union[str, int], np.ndarray], Dict[Union[str, int], any]]:
-        """Reads in the fields. Returns a dict of arrays and a dict of wcs coordinates."""
+        """Reads in the fields. Returns a dict of arrays and a dict of wcs coordinates.
+
+        Args:
+            drop_axes (List[int]): Not implemented.
+
+        Returns:
+            Tuple[Dict[Union[str, int], np.ndarray], Dict[Union[str, int], any]]: Dict of arrays and a dict of coordinates (wcs). One entry each for the respective provided field names.
+        """
         images, wcs = {}, {}
         for image_path, field in zip(self.image_paths, self.field_names):
             data, wcs_ = self.open_fits(
@@ -213,15 +253,38 @@ class CataData:
         return images, wcs
 
     def open_fits(self, path: str, index: int, drop_axes: List[int] = None) -> tuple:
+        """Opens fits data.
+
+        Args:
+            path (str): Path to data.
+            index (int): Index at which the data product is stored within the fits file.
+            drop_axes (List[int], optional): Not Implemented. Defaults to None.
+
+        Returns:
+            tuple: _description_
+        """
         with fits.open(path, memmap=self.memmap) as hdul:
             data = hdul[index].data
             wcs = WCS(hdul[index].header, naxis=2)
         return data, wcs
 
     def _paths_exist(self, paths: List[str]) -> List[bool]:
+        """Check if paths exist.
+
+        Args:
+            paths (List[str]): List of paths.
+
+        Returns:
+            List[bool]
+        """
         return [os.path.exists(path) for path in paths]
 
-    def _check_exists(self) -> Tuple[pd.DataFrame, List[np.ndarray]]:
+    def _check_exists(self) -> None:
+        """Check if data exists.
+
+        Raises:
+            ValueError: Data not found and logs which entries are not found through ordered list of booleans.
+        """
         catalogues_exist = self._paths_exist(self.catalogue_paths)
         images_exist = self._paths_exist(self.image_paths)
         if all(catalogues_exist) and all(images_exist):
@@ -233,8 +296,7 @@ class CataData:
 
     def _verify_input_lengths(self) -> None:
         """Check that catalogues, images, fits_index_catalogues, fits_index_images,
-        fields all have correct lengths in relation to one another.
-        """
+        fields all have correct lengths in relation to one another."""
         if (
             len(self.image_paths)
             != len(self.catalogue_paths)
