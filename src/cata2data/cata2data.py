@@ -283,7 +283,8 @@ class CataData:
         with fits.open(path, memmap=self.memmap) as hdul:
             data = hdul[index].data
             wcs = WCS(hdul[index].header, naxis=2)
-            print(data.tostring())
+            print(hdul[index].header)
+
         return data, wcs
 
     def open_catalogue(
