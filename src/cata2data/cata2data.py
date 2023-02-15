@@ -149,10 +149,16 @@ class CataData:
         cutouts = []
         wcs = []
         for coord in skycoord_coordinates:
+            print(f"coord: {coord}")
+            print(f"self.images[field].shape: {self.images[field].shape}")
+
             cutout = Cutout2D(
-                self.images[field],
-                coord,
-                (self.cutout_width, self.cutout_width),
+                data=self.images[field],
+                position=coord,
+                size=(
+                    self.cutout_width,
+                    self.cutout_width,
+                ),  # Could be anything? Or just unconstrained?
                 wcs=self.wcs[field],
                 mode="partial",
                 fill_value=0,
@@ -283,7 +289,7 @@ class CataData:
         with fits.open(path, memmap=self.memmap) as hdul:
             data = hdul[index].data
             wcs = WCS(hdul[index].header, naxis=2)
-            print(hdul[index].header)
+            # print(hdul[index].header)
 
         return data, wcs
 
