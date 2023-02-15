@@ -1,11 +1,14 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.units import Quantity
+from astropy.table import Table
 import astropy.units as units
 from astropy.coordinates import SkyCoord
+
 from typing import Any, Callable, Optional, List, Union, Tuple, Dict
 from astropy.nddata import Cutout2D
 import os
@@ -21,7 +24,7 @@ class CataData:
         image_paths: Union[List[str], str],
         field_names: Union[List[Union[int, int]], str],
         cutout_width: Union[int, Quantity] = 32,
-        memmap: bool = False,
+        memmap: bool = True,
         polarisation: bool = False,
         transform: Optional[Callable] = None,
         catalogue_preprocessing: Optional[Callable] = None,
@@ -60,6 +63,7 @@ class CataData:
             fits_index_images (int, optional): Index used in self.open_fits call. Selects correct wcs entry for respective images. Ordered appropriately with paths. Defaults to 0.
             image_drop_axes (List[int], optional): Not Implemented. Defaults to [3,2].
             origin (int, optional): Wcs origin. Used in cutout to calculated wcs.world2pix coords. Defaults to 1.
+
         """
         self.catalogue_paths = (
             catalogue_paths if type(catalogue_paths) is list else [catalogue_paths]
@@ -224,10 +228,11 @@ class CataData:
         """
         df = []
         for catalogue_path, field in zip(self.catalogue_paths, self.field_names):
-            data, wcs = self.open_fits(
-                path=catalogue_path, index=self.fits_index_catalogue
-            )
-            tmp = pd.DataFrame(data)
+            tmp = self.open_catalogue(path=catalogue_path)
+            # data, wcs = self.open_fits(
+            #     path=catalogue_path, index=self.fits_index_catalogue
+            # )
+            # tmp = pd.DataFrame(data)
             tmp["field"] = field
             df.append(tmp)
         df = pd.concat(df, ignore_index=True)
@@ -278,6 +283,25 @@ class CataData:
             data = hdul[index].data
             wcs = WCS(hdul[index].header, naxis=2)
         return data, wcs
+
+    def open_catalogue(
+        self, path: str, pandas: bool = True, format: str = "fits"
+    ) -> Union[Table, pd.DataFrame]:
+        """Opens a catalogue either as pandas dataframe or astropy Table object.
+
+        Args:
+            path (str): Path to file.
+            pandas (bool, optional): Return as pandas dataframe. Defaults to True.
+            format (str, optional): File format passed to astropy table.read() call. Defaults to "fits".
+
+        Returns:
+            Union[Table, pd.DataFrame]: _description_
+        """
+        table = Table.read(path, memmap=True, format="fits")
+        if pandas:
+            return table.to_pandas()
+        else:
+            return table
 
     def _paths_exist(self, paths: List[str]) -> List[bool]:
         """Check if paths exist.
