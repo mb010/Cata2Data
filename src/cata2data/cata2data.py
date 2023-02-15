@@ -258,6 +258,7 @@ class CataData:
                 index=self.fits_index_images,
                 # drop_axes=drop_axes
             )
+
             images[field] = data
             wcs[field] = wcs_
         if self.wcs_preprocessing is not None:
@@ -282,6 +283,7 @@ class CataData:
         with fits.open(path, memmap=self.memmap) as hdul:
             data = hdul[index].data
             wcs = WCS(hdul[index].header, naxis=2)
+            print(data.tostring())
         return data, wcs
 
     def open_catalogue(
