@@ -20,7 +20,7 @@ class CataData:
         catalogue_paths: Union[List[str], str],
         image_paths: Union[List[str], str],
         field_names: Union[List[Union[int, int]], str],
-        cutout_width: int | Quantity = 32,
+        cutout_width: Union[int, Quantity] = 32,
         memmap: bool = False,
         polarisation: bool = False,
         transform: Optional[Callable] = None,
