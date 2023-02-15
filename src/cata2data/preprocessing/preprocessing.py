@@ -14,6 +14,7 @@ def image_preprocessing(image: np.ndarray, field: str) -> np.ndarray:
     Returns:
         np.ndarray: Squeezed image. I.e. removed empty axis.
     """
+    image = np.transpose(image)
     return np.squeeze(image)
 
 
