@@ -38,3 +38,9 @@ See the doc strings for detailed notes on all of the parameters which CataData a
 [Open an issue](https://github.com/mb010/Cata2Data/issues) and let us know what sort of issue you are experiencing.
 
 [Open a pull request](https://github.com/mb010/Cata2Data/pulls) if you have added functionality or fixed a bug.
+
+
+# Conceptual Workflow
+CataData takes in fields of images and catalogues. Catalogues are merged into one dataframe and labelled with their respective field names. The length of CataData objects is the length of that dataframe. Entries are indexed through the dataframe and samples are cutout from the respective image using the units provided in the "RA" and "DEC" columns of the catalogue.
+
+If catalogued features are needed to manipulate the iamges, we recommend using an image processing wrapper around CataData objects. I.e. a function like: `image_postprocessing(catadata_instance, index) -> np.ndarray` which calls the `catadata_object[index]` and manipulates the resulting image as required before returning it.
