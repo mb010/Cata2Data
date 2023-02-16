@@ -1,17 +1,20 @@
+from typing import Any, Callable, Optional, List, Union, Tuple, Dict
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
+from astropy.utils import data
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.units import Quantity
 from astropy.table import Table
-import astropy.units as units
 from astropy.coordinates import SkyCoord
-
-from typing import Any, Callable, Optional, List, Union, Tuple, Dict
 from astropy.nddata import Cutout2D
-import os
+import astropy.units as units
+
+import regions
+from spectral_cube import StokesSpectralCube, SpectralCube
 
 
 class CataData:
@@ -25,15 +28,15 @@ class CataData:
         field_names: Union[List[Union[int, int]], str],
         cutout_width: Union[int, Quantity] = 32,
         memmap: bool = True,
-        polarisation: bool = False,
         transform: Optional[Callable] = None,
         catalogue_preprocessing: Optional[Callable] = None,
-        image_preprocessing: Optional[Callable] = None,
         wcs_preprocessing: Optional[Callable] = None,
         fits_index_catalogue: int = 1,
         fits_index_images: int = 0,
         image_drop_axes: List[int] = [3, 2],
         origin: int = 1,
+        spectral_axis: bool = False,
+        stokes_axis: bool = False,
     ) -> None:
         """Produces a deep learning ready data set from fits catalogues
         and fits images.
@@ -49,20 +52,18 @@ class CataData:
                 Cut out pixel width. Defaults to 32.
             memmap (bool, optional):
                 Whether to use memory mapping (dynamic reading of images into memory). Defaults to False.
-            polarisation (bool, optional):
-                Whether data is polarised or not. Defaults to False.
             transform (Optional[Callable], optional):
                 Transformations to use. Currently not implemented. Defaults to None.
             catalogue_preprocessing (Optional[Callable], optional):
                 Function to apply to catalogues before use. Ideal for filtering to subsamples. Defaults to None.
-            image_preprocessing (Optional[Callable], optional):
-                Function to apply to images before use. Defaults to None.
             wcs_preprocessing (Optional[Callable], optional):
                 Function applied to the astropy wcs object before selecting data from the images. Defaults to None.
             fits_index_catalogue (int, optional): Index used in self.open_fits call. Selects correct wcs entry for respective catalogues. Ordered appropriately with paths. Defaults to 1.
             fits_index_images (int, optional): Index used in self.open_fits call. Selects correct wcs entry for respective images. Ordered appropriately with paths. Defaults to 0.
             image_drop_axes (List[int], optional): Not Implemented. Defaults to [3,2].
             origin (int, optional): Wcs origin. Used in cutout to calculated wcs.world2pix coords. Defaults to 1.
+            spectral_axis (bool): TO BE COMPLETED. Detaults to False.
+            stokes_axis (bool): TO BE COMPLETED. Defaults to False.
 
         """
         self.catalogue_paths = (
@@ -78,7 +79,6 @@ class CataData:
         self._check_exists()
 
         self.catalogue_preprocessing = catalogue_preprocessing
-        self.image_preprocessing = image_preprocessing
         self.wcs_preprocessing = wcs_preprocessing
 
         # if transform is albumentations transform do ...
@@ -86,8 +86,9 @@ class CataData:
 
         self.memmap = memmap
         self.origin = origin
-        self.polarisation = polarisation
         self.cutout_width = cutout_width
+        self.spectral_axis = spectral_axis
+        self.stokes_axis = stokes_axis
 
         self.df = self._build_df()
         self.images, self.wcs = self._build_images(image_drop_axes)
@@ -141,33 +142,59 @@ class CataData:
         #    coords, self.origin
         # )  # Could replace with SkyCoord object.
 
+        wcs = self.wcs[field]
         skycoord_coordinates = SkyCoord(
             ra=coords[:, 0] * units.deg,
             dec=coords[:, 1] * units.deg,
-            frame=self.wcs[field].to_header()["RADESYS"].lower(),
+            frame=wcs.to_header()["RADESYS"].lower(),
         )
         cutouts = []
-        wcs = []
+        wcs_ = []
         for coord in skycoord_coordinates:
             print(f"coord: {coord}")
             print(f"self.images[field].shape: {self.images[field].shape}")
 
-            cutout = Cutout2D(
-                data=self.images[field],
-                position=coord,
-                size=(
+            if self.stokes_axis or self.spectral_axis:
+                region = regions.RectanglePixelRegion(
+                    regions.PixCoord.from_sky(coord, wcs),
                     self.cutout_width,
                     self.cutout_width,
-                ),  # Could be anything? Or just unconstrained?
-                wcs=self.wcs[field],
-                mode="partial",
-                fill_value=0,
-            )
+                )
+                if self.stokes_axis:
+                    cutout = []
+
+                    for component in self.images[field].components:
+                        cutout_ = (
+                            self.images[field]
+                            ._stokes_data[component]
+                            .subcube_from_regions([region])
+                        )
+                        cutout.append(cutout_.unmasked_data[:])
+                        wcs_.append({component: cutout_.wcs})
+                    cutouts.append(np.stack(cutout))
+                else:
+                    cutout = self.images[field].subcube_from_regions([region])
+                    cutouts.append(cutout.unmasked_data[:])
+                    wcs = cutout.wcs
+            else:
+                cutout = Cutout2D(
+                    data=self.images[field],
+                    position=coord,
+                    size=(
+                        self.cutout_width,
+                        self.cutout_width,
+                    ),  # Could be anything? Or just unconstrained?
+                    wcs=self.wcs[field],
+                    mode="partial",
+                    fill_value=0,
+                )
+                wcs = cutout.wcs
+                cutouts.append(cutout.data)
             if return_wcs:
-                wcs.append(cutout.wcs)
-            cutouts.append(cutout.data)
+                wcs_.append(cutout.wcs)
+
         if return_wcs:
-            return np.stack(cutouts), wcs
+            return np.stack(cutouts), wcs_
         return np.stack(cutouts)
 
     def save_cutout(path: str, index: int, format: str = "fits") -> None:
@@ -177,6 +204,8 @@ class CataData:
             index (int): Catalogue index used to produce cutout.
             format (str): File out type. Defaults to 'fits' (coordinate system corrected header).
         """
+        if self.spectral_axis:
+            raise NotImplementedError
         cutout, wcs = self.__getitem__(index, return_wcs=True)
         wcs = wcs[0]  # unpack extract dimension
         cutout = cutout[0]
@@ -192,6 +221,12 @@ class CataData:
         Args:
             index (int): Index of the source to plot.
         """
+        if self.spectral_axis:
+            raise Warning(
+                "Plotting not implemented for spectral cube data. Passing the plotting call."
+            )
+            return
+
         crosshair_alpha = 0.3
         image, wcs = self.__getitem__(index, return_wcs=True)
         image = np.squeeze(image[0])
@@ -235,10 +270,6 @@ class CataData:
         df = []
         for catalogue_path, field in zip(self.catalogue_paths, self.field_names):
             tmp = self.open_catalogue(path=catalogue_path)
-            # data, wcs = self.open_fits(
-            #     path=catalogue_path, index=self.fits_index_catalogue
-            # )
-            # tmp = pd.DataFrame(data)
             tmp["field"] = field
             df.append(tmp)
         df = pd.concat(df, ignore_index=True)
@@ -248,32 +279,42 @@ class CataData:
 
     def _build_images(
         self, drop_axes: List[int]
-    ) -> Tuple[Dict[Union[str, int], np.ndarray], Dict[Union[str, int], any]]:
+    ) -> Tuple[Dict[Union[str, int], Any], Dict[Union[str, int], Any]]:
         """Reads in the fields. Returns a dict of arrays and a dict of wcs coordinates.
 
         Args:
             drop_axes (List[int]): Not implemented.
 
         Returns:
-            Tuple[Dict[Union[str, int], np.ndarray], Dict[Union[str, int], any]]: Dict of arrays and a dict of coordinates (wcs). One entry each for the respective provided field names.
+            Tuple[Dict[Union[str, int], Any], Dict[Union[str, int], Any]]: Dict of arrays and a dict of coordinates (wcs). One entry each for the respective provided field names.
         """
-        images, wcs = {}, {}
-        for image_path, field in zip(self.image_paths, self.field_names):
-            data, wcs_ = self.open_fits(
-                path=image_path,
-                index=self.fits_index_images,
-                # drop_axes=drop_axes
-            )
+        if self.spectral_axis:
+            cubes, wcs = {}, {}
+            for image_path, field in zip(self.image_paths, self.field_names):
+                if self.stokes_axis:
+                    cube = StokesSpectralCube.read(image_path)
+                else:
+                    cube = SpectralCube.read(image_path)
+                # https://spectral-cube.readthedocs.io/en/latest/accessing.html#data-values
+                cubes[field] = cube
+                wcs[field] = cube.wcs
 
-            images[field] = data
-            wcs[field] = wcs_
-        if self.wcs_preprocessing is not None:
-            for field, wcs_ in wcs.items():
-                wcs[field] = self.wcs_preprocessing(wcs_, field)
-        if self.image_preprocessing is not None:
-            for field, image in images.items():
-                images[field] = self.image_preprocessing(image, field)
-        return images, wcs
+            return cubes, wcs
+
+        else:
+            images, wcs = {}, {}
+            for image_path, field in zip(self.image_paths, self.field_names):
+                data, wcs_ = self.open_fits(
+                    path=image_path,
+                    index=self.fits_index_images,
+                )
+
+                images[field] = data
+                wcs[field] = wcs_
+            for field in self.field_names:
+                if self.wcs_preprocessing is not None:
+                    wcs[field] = self.wcs_preprocessing(wcs[field], field)
+            return images, wcs
 
     def open_fits(self, path: str, index: int, drop_axes: List[int] = None) -> tuple:
         """Opens fits data.
