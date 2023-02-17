@@ -34,7 +34,6 @@ def wcs_preprocessing(wcs, field: str):
         raise UserWarning(
             f"This may cause issues in the future. It is unclear where header would have been defined."
         )
-        wcs = WCS(header, naxis=2)  # This surely causes a bug right?
     else:
         return wcs
 
