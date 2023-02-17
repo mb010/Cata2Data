@@ -151,9 +151,6 @@ class CataData:
         cutouts = []
         wcs_ = []
         for coord in skycoord_coordinates:
-            print(f"coord: {coord}")
-            print(f"self.images[field].shape: {self.images[field].shape}")
-
             if self.stokes_axis or self.spectral_axis:
                 region = regions.RectanglePixelRegion(
                     regions.PixCoord.from_sky(coord, wcs),
@@ -330,8 +327,6 @@ class CataData:
         with fits.open(path, memmap=self.memmap) as hdul:
             data = hdul[index].data
             wcs = WCS(hdul[index].header, naxis=2)
-            # print(hdul[index].header)
-
         return data, wcs
 
     def open_catalogue(
