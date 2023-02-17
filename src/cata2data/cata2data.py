@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-from astropy.utils import data
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.units import Quantity
@@ -37,6 +36,7 @@ class CataData:
         origin: int = 1,
         spectral_axis: bool = False,
         stokes_axis: bool = False,
+        return_wcs: bool = False,
     ) -> None:
         """Produces a deep learning ready data set from fits catalogues
         and fits images.
@@ -89,11 +89,12 @@ class CataData:
         self.cutout_width = cutout_width
         self.spectral_axis = spectral_axis
         self.stokes_axis = stokes_axis
+        self.return_wcs = return_wcs
 
         self.df = self._build_df()
         self.images, self.wcs = self._build_images(image_drop_axes)
 
-    def __getitem__(self, index: int, return_wcs=False) -> np.ndarray:
+    def __getitem__(self, index: int) -> np.ndarray:
         """Gets the respective indexed item within the data set. Indexes from the built catalogue data frame.
 
         Args:
@@ -111,7 +112,7 @@ class CataData:
         coords = self.df.iloc[index : index + 1][["RA", "DEC"]].values
         field = self.df.iloc[index].field
         image = self.cutout(coords, field=field)[0]
-        return self.cutout(coords, field=field, return_wcs=return_wcs)
+        return self.cutout(coords, field=field, return_wcs=self.return_wcs)
 
     def __len__(self) -> int:
         """Returns the length of the processed catalogue. Necessary for pytorch dataloaders.
@@ -159,20 +160,20 @@ class CataData:
                 )
                 if self.stokes_axis:
                     cutout = []
-
                     for component in self.images[field].components:
                         cutout_ = (
                             self.images[field]
                             ._stokes_data[component]
                             .subcube_from_regions([region])
                         )
-                        cutout.append(cutout_.unmasked_data[:])
+                        cutout.append(np.asarray(cutout_.unmasked_data[:]))
                         wcs_.append({component: cutout_.wcs})
                     cutouts.append(np.stack(cutout))
                 else:
-                    cutout = self.images[field].subcube_from_regions([region])
-                    cutouts.append(cutout.unmasked_data[:])
-                    wcs = cutout.wcs
+                    cutout_ = self.images[field].subcube_from_regions([region])
+                    cutouts.append(cutout_.unmasked_data[:])
+                    if return_wcs:
+                        wcs_.append(cutout_.wcs)
             else:
                 cutout = Cutout2D(
                     data=self.images[field],
@@ -187,8 +188,8 @@ class CataData:
                 )
                 wcs = cutout.wcs
                 cutouts.append(cutout.data)
-            if return_wcs:
-                wcs_.append(cutout.wcs)
+                if return_wcs:
+                    wcs_.append(cutout.wcs)
 
         if return_wcs:
             return np.stack(cutouts), wcs_
