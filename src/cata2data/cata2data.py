@@ -94,7 +94,7 @@ class CataData:
         self.df = self._build_df()
         self.images, self.wcs = self._build_images(image_drop_axes)
 
-    def __getitem__(self, index: int) -> np.ndarray:
+    def __getitem__(self, index: int, force_return_wcs: bool = False) -> np.ndarray:
         """Gets the respective indexed item within the data set. Indexes from the built catalogue data frame.
 
         Args:
@@ -112,7 +112,8 @@ class CataData:
         coords = self.df.iloc[index : index + 1][["RA", "DEC"]].values
         field = self.df.iloc[index].field
         image = self.cutout(coords, field=field)[0]
-        return self.cutout(coords, field=field, return_wcs=self.return_wcs)
+        return_wcs = True if (self.return_wcs or force_return_wcs) else False
+        return self.cutout(coords, field=field, return_wcs=return_wcs)
 
     def __len__(self) -> int:
         """Returns the length of the processed catalogue. Necessary for pytorch dataloaders.
@@ -204,7 +205,7 @@ class CataData:
         """
         if self.spectral_axis:
             raise NotImplementedError
-        cutout, wcs = self.__getitem__(index, return_wcs=True)
+        cutout, wcs = self.__getitem__(index, force_return_wcs=True)
         wcs = wcs[0]  # unpack extract dimension
         cutout = cutout[0]
         if format == "fits":
@@ -226,7 +227,7 @@ class CataData:
             return
 
         crosshair_alpha = 0.3
-        image, wcs = self.__getitem__(index, return_wcs=True)
+        image, wcs = self.__getitem__(index, force_return_wcs=True)
         image = np.squeeze(image[0])
         wcs = wcs[0]
         plt.subplot(projection=wcs)
