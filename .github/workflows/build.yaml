@@ -17,12 +17,14 @@ permissions:
 
 jobs:
   lint:
+    name: Python Black
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3.0.2
-    - uses: ptxmac/yapf-action@master
-      with:
-        args: --recursive --verbose
+      - uses: actions/checkout@v3
+      - name: Python Black
+        uses: cytopia/docker-black@0.8
+        with:
+          path: 'src/'
 
   build:
     runs-on: ubuntu-latest
