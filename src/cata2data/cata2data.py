@@ -57,8 +57,10 @@ class CataData:
                 Function to apply to catalogues before use. Ideal for filtering to subsamples. Defaults to None.
             wcs_preprocessing (Optional[Callable], optional):
                 Function applied to the astropy wcs object before selecting data from the images. Defaults to None.
-            fits_index_catalogue (int, optional): Index used in self.open_fits call. Selects correct wcs entry for respective catalogues. Ordered appropriately with paths. Defaults to 1.
-            fits_index_images (int, optional): Index used in self.open_fits call. Selects correct wcs entry for respective images. Ordered appropriately with paths. Defaults to 0.
+            fits_index_catalogue (int, optional): Index used in self.open_fits call. Selects correct wcs entry for
+            respective catalogues. Ordered appropriately with paths. Defaults to 1.
+            fits_index_images (int, optional): Index used in self.open_fits call. Selects correct wcs entry for
+            respective images. Ordered appropriately with paths. Defaults to 0.
             image_drop_axes (List[int], optional): Not Implemented. Defaults to [3,2].
             origin (int, optional): Wcs origin. Used in cutout to calculated wcs.world2pix coords. Defaults to 1.
             spectral_axis (bool): TO BE COMPLETED. Detaults to False.

@@ -47,14 +47,14 @@ jobs:
       run: python3 -m build
     - name: Build bdist package
       run: python3 setup.py bdist_wheel
-    - name: Install casa2data
+    - name: Install cata2data
       run: pip3 install dist/*.tar.gz
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: casa2data-artifacts
+        name: cata2data-artifacts
         path: dist/*
     - name: Run commands to test that everything is OK
-      run: |
-        pip3 freeze | grep "casa2data"
-        python3 -c "import casa2data"
+      run: |-
+        pip3 freeze | grep "cata2data"
+        python3 -c "import cata2data"
