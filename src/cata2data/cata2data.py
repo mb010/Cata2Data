@@ -1,19 +1,18 @@
-from typing import Any, Callable, Optional, List, Union, Tuple, Dict
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 import os
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from astropy.io import fits
-from astropy.wcs import WCS
-from astropy.units import Quantity
-from astropy.table import Table
-from astropy.coordinates import SkyCoord
-from astropy.nddata import Cutout2D
 import astropy.units as units
-
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import regions
-from spectral_cube import StokesSpectralCube, SpectralCube
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
+from astropy.nddata import Cutout2D
+from astropy.table import Table
+from astropy.units import Quantity
+from astropy.wcs import WCS
+from spectral_cube import SpectralCube, StokesSpectralCube
 
 
 class CataData:
@@ -58,8 +57,10 @@ class CataData:
                 Function to apply to catalogues before use. Ideal for filtering to subsamples. Defaults to None.
             wcs_preprocessing (Optional[Callable], optional):
                 Function applied to the astropy wcs object before selecting data from the images. Defaults to None.
-            fits_index_catalogue (int, optional): Index used in self.open_fits call. Selects correct wcs entry for respective catalogues. Ordered appropriately with paths. Defaults to 1.
-            fits_index_images (int, optional): Index used in self.open_fits call. Selects correct wcs entry for respective images. Ordered appropriately with paths. Defaults to 0.
+            fits_index_catalogue (int, optional): Index used in self.open_fits call. Selects correct wcs entry for
+            respective catalogues. Ordered appropriately with paths. Defaults to 1.
+            fits_index_images (int, optional): Index used in self.open_fits call. Selects correct wcs entry for
+            respective images. Ordered appropriately with paths. Defaults to 0.
             image_drop_axes (List[int], optional): Not Implemented. Defaults to [3,2].
             origin (int, optional): Wcs origin. Used in cutout to calculated wcs.world2pix coords. Defaults to 1.
             spectral_axis (bool): TO BE COMPLETED. Detaults to False.

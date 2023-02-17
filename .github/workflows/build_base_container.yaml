@@ -4,24 +4,22 @@ on:
   push:
     branches:
     - main
-    paths:
-    - Dockerfile
   pull_request:
     branches:
     - main
-    paths:
-    - Dockerfile
 env:
   REGISTRY: ghcr.io
 
 jobs:
   lint:
+    name: Python Black
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3.0.2
-    - uses: ptxmac/yapf-action@master
+    - uses: actions/checkout@v3
+    - name: Python Black
+      uses: cytopia/docker-black@0.8
       with:
-        args: --recursive --verbose
+        path: src/
   build:
     runs-on: ubuntu-latest
     needs: lint

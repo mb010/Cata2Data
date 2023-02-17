@@ -1,7 +1,8 @@
+from typing import Any, Optional
+
 import numpy as np
 import pandas as pd
 from astropy.wcs import WCS
-from typing import Any, Optional
 
 
 def image_preprocessing(image: np.ndarray, field: str) -> np.ndarray:
@@ -33,7 +34,6 @@ def wcs_preprocessing(wcs, field: str):
         raise UserWarning(
             f"This may cause issues in the future. It is unclear where header would have been defined."
         )
-        wcs = WCS(header, naxis=2)  # This surely causes a bug right?
     else:
         return wcs
 
