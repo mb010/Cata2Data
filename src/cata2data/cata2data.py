@@ -1,19 +1,18 @@
-from typing import Any, Callable, Optional, List, Union, Tuple, Dict
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 import os
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from astropy.io import fits
-from astropy.wcs import WCS
-from astropy.units import Quantity
-from astropy.table import Table
-from astropy.coordinates import SkyCoord
-from astropy.nddata import Cutout2D
 import astropy.units as units
-
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import regions
-from spectral_cube import StokesSpectralCube, SpectralCube
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
+from astropy.nddata import Cutout2D
+from astropy.table import Table
+from astropy.units import Quantity
+from astropy.wcs import WCS
+from spectral_cube import SpectralCube, StokesSpectralCube
 
 
 class CataData:

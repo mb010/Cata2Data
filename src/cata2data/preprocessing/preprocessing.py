@@ -1,7 +1,8 @@
+from typing import Any, Optional
+
 import numpy as np
 import pandas as pd
 from astropy.wcs import WCS
-from typing import Any, Optional
 
 
 def image_preprocessing(image: np.ndarray, field: str) -> np.ndarray:
