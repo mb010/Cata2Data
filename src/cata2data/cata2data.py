@@ -111,7 +111,6 @@ class CataData:
             raise ValueError(f"Index out of range.")
         coords = self.df.iloc[index : index + 1][["RA", "DEC"]].values
         field = self.df.iloc[index].field
-        image = self.cutout(coords, field=field)[0]
         return_wcs = True if (self.return_wcs or force_return_wcs) else False
         return self.cutout(coords, field=field, return_wcs=return_wcs)
 
@@ -177,7 +176,7 @@ class CataData:
                         wcs_.append(cutout_.wcs)
             else:
                 cutout = Cutout2D(
-                    data=self.images[field],
+                    data=np.squeeze(self.images[field]),
                     position=coord,
                     size=(
                         self.cutout_width,
