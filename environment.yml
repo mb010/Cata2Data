@@ -11,3 +11,4 @@ dependencies:
   - matplotlib==3.6.3
   - pandas==1.5.3
   - spectral-cube==0.6.0
+  - regions==0.7
