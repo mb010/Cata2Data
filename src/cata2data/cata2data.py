@@ -155,7 +155,7 @@ class CataData:
         for coord in skycoord_coordinates:
             if self.stokes_axis or self.spectral_axis:
                 region = regions.RectanglePixelRegion(
-                    regions.PixCoord.from_sky(coord, wcs),
+                    regions.PixCoord.from_sky(coord, wcs, 0, "wcs"),
                     self.cutout_width,
                     self.cutout_width,
                 )
