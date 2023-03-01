@@ -140,11 +140,9 @@ class CataData:
         ### Currently using:
         # https://docs.astropy.org/en/stable/nddata/utils.html#cutout-images
         # https://docs.astropy.org/en/stable/api/astropy.nddata.Cutout2D.html
-        # positions = self.wcs[field].all_world2pix(
-        #    coords, self.origin
-        # )  # Could replace with SkyCoord object.
 
         wcs = self.wcs[field]
+        print(wcs)
         skycoord_coordinates = SkyCoord(
             ra=coords[:, 0] * units.deg,
             dec=coords[:, 1] * units.deg,
