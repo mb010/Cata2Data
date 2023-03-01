@@ -110,7 +110,7 @@ class CataData:
         """
         if index >= self.__len__():
             raise ValueError(f"Index out of range.")
-        coords = self.df.iloc[index : index + 1][["RA", "DEC"]].values
+        coords = self.df.iloc[index : index + 1][["ra", "dec"]].values
         field = self.df.iloc[index].field
         return_wcs = True if (self.return_wcs or force_return_wcs) else False
         return self.cutout(coords, field=field, return_wcs=return_wcs)
