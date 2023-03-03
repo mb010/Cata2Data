@@ -167,7 +167,7 @@ class CataData:
                             ._stokes_data[component]
                             .subcube_from_regions([region])
                         )
-                        cutout.append(np.asarray(cutout_.unmasked_data[:]))
+                        cutout.append(cutout_.unmasked_data[:].value)
                         wcs_.append({component: cutout_.wcs})
                     cutouts.append(np.stack(cutout))
                 else:
