@@ -142,16 +142,24 @@ class CataData:
         # https://docs.astropy.org/en/stable/api/astropy.nddata.Cutout2D.html
 
         wcs = self.wcs[field]
-        print(wcs)
-        skycoord_coordinates = SkyCoord(
-            ra=coords[:, 0] * units.deg,
-            dec=coords[:, 1] * units.deg,
-            frame=wcs.to_header()["RADESYS"].lower(),
-        )
+        if "RADESYS" in wcs.to_header().keys():
+            skycoord_coordinates = SkyCoord(
+                ra=coords[:, 0] * units.deg,
+                dec=coords[:, 1] * units.deg,
+                frame=wcs.to_header()["RADESYS"].lower(),
+            )
+        else:
+            skycoord_coordinates = SkyCoord(
+                ra=coords[:, 0] * units.deg, dec=coords[:, 1] * units.deg
+            )
+            raise UserWarning(
+                f"Images of field '{field}' may not be image files since the header does not contain a 'RADESYS' entry."
+            )
+
         cutouts = []
         wcs_ = []
         for coord in skycoord_coordinates:
-            if self.stokes_axis or self.spectral_axis:
+            if self.spectral_axis:
                 region = regions.RectanglePixelRegion(
                     regions.PixCoord.from_sky(coord, wcs),
                     self.cutout_width,
