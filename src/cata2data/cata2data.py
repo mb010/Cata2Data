@@ -212,7 +212,9 @@ class CataData:
             raise NotImplementedError("Currently only fits format supported.")
         return
 
-    def plot(self, index: int) -> None:
+    def plot(
+        self, index: int, contours: bool = False, sigma_name: str = "ISL_RMS"
+    ) -> None:
         """Plot the source with the given index.
 
         Args:
@@ -231,11 +233,12 @@ class CataData:
         plt.subplot(projection=wcs)
         plt.imshow(image, origin="lower", cmap="Greys")
         plt.colorbar()
-        plt.contour(
-            image,
-            levels=[self.df.iloc[index]["ISL_RMS"] * (3 + n) for n in range(3)],
-            origin="lower",
-        )
+        if contours:
+            plt.contour(
+                image,
+                levels=[self.df.iloc[index][sigma_name] * (3 + n) for n in range(3)],
+                origin="lower",
+            )
         plt.plot(
             (self.cutout_width // 2, self.cutout_width // 2),
             (0, self.cutout_width - 1),
@@ -297,7 +300,6 @@ class CataData:
                 wcs[field] = cube.wcs
 
             return cubes, wcs
-
         else:
             images, wcs = {}, {}
             for image_path, field in zip(self.image_paths, self.field_names):
