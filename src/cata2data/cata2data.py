@@ -36,6 +36,7 @@ class CataData:
         spectral_axis: bool = False,
         stokes_axis: bool = False,
         return_wcs: bool = False,
+        fill_value: float = 0.0,
     ) -> None:
         """Produces a deep learning ready data set from fits catalogues
         and fits images.
@@ -191,7 +192,7 @@ class CataData:
                     ),  # Could be anything? Or just unconstrained?
                     wcs=self.wcs[field],
                     mode="partial",
-                    fill_value=0,
+                    fill_value=self.fill_value,
                 )
                 wcs = cutout.wcs
                 cutouts.append(cutout.data)
