@@ -58,14 +58,22 @@ class CataData:
                 Function to apply to catalogues before use. Ideal for filtering to subsamples. Defaults to None.
             wcs_preprocessing (Optional[Callable], optional):
                 Function applied to the astropy wcs object before selecting data from the images. Defaults to None.
-            fits_index_catalogue (int, optional): Index used in self.open_fits call. Selects correct wcs entry for
-            respective catalogues. Ordered appropriately with paths. Defaults to 1.
-            fits_index_images (int, optional): Index used in self.open_fits call. Selects correct wcs entry for
-            respective images. Ordered appropriately with paths. Defaults to 0.
-            image_drop_axes (List[int], optional): Not Implemented. Defaults to [3,2].
-            origin (int, optional): Wcs origin. Used in cutout to calculated wcs.world2pix coords. Defaults to 1.
-            spectral_axis (bool): TO BE COMPLETED. Detaults to False.
-            stokes_axis (bool): TO BE COMPLETED. Defaults to False.
+            fits_index_catalogue (int, optional):
+                Index used in self.open_fits call. Selects correct wcs entry for
+                respective catalogues. Ordered appropriately with paths. Defaults to 1.
+            fits_index_images (int, optional):
+                Index used in self.open_fits call. Selects correct wcs entry for
+                respective images. Ordered appropriately with paths. Defaults to 0.
+            image_drop_axes (List[int], optional):
+                Not Implemented. Defaults to [3,2].
+            origin (int, optional):
+                Wcs origin. Used in cutout to calculated wcs.world2pix coords. Defaults to 1.
+            spectral_axis (bool):
+                TO BE COMPLETED. Detaults to False.
+            stokes_axis (bool):
+                TO BE COMPLETED. Defaults to False.
+            fill_value (float):
+                Value which cutouts should be padded with if there isn't full coverage. Defaults to 0.
 
         """
         self.catalogue_paths = (
@@ -93,6 +101,7 @@ class CataData:
         self.stokes_axis = stokes_axis
         self.return_wcs = return_wcs
 
+        self.fill_value = fill_value
         self.df = self._build_df()
         self.images, self.wcs = self._build_images(image_drop_axes)
 
@@ -131,7 +140,7 @@ class CataData:
         coordinates and field.
 
         Args:
-            coords (np.ndarray): Source coordinates.
+            coords (np.ndarray): Source coordinates (ra, dec).
             field (Union[str, int]): Field name or number.
             return_wcs (bool, optional): Whether to return the coordinate objects of the cutouts. Defaults to False.
 
