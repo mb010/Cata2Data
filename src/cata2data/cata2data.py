@@ -110,7 +110,7 @@ class CataData:
         """
         if index >= self.__len__():
             raise ValueError(f"Index out of range.")
-        coords = self.df.iloc[index : index + 1][["RA", "DEC"]].values
+        coords = self.df.iloc[index : index + 1][["ra", "dec"]].values
         field = self.df.iloc[index].field
         return_wcs = True if (self.return_wcs or force_return_wcs) else False
         return self.cutout(coords, field=field, return_wcs=return_wcs)
@@ -140,20 +140,26 @@ class CataData:
         ### Currently using:
         # https://docs.astropy.org/en/stable/nddata/utils.html#cutout-images
         # https://docs.astropy.org/en/stable/api/astropy.nddata.Cutout2D.html
-        # positions = self.wcs[field].all_world2pix(
-        #    coords, self.origin
-        # )  # Could replace with SkyCoord object.
 
         wcs = self.wcs[field]
-        skycoord_coordinates = SkyCoord(
-            ra=coords[:, 0] * units.deg,
-            dec=coords[:, 1] * units.deg,
-            frame=wcs.to_header()["RADESYS"].lower(),
-        )
+        if "RADESYS" in wcs.to_header().keys():
+            skycoord_coordinates = SkyCoord(
+                ra=coords[:, 0] * units.deg,
+                dec=coords[:, 1] * units.deg,
+                frame=wcs.to_header()["RADESYS"].lower(),
+            )
+        else:
+            skycoord_coordinates = SkyCoord(
+                ra=coords[:, 0] * units.deg, dec=coords[:, 1] * units.deg
+            )
+            raise UserWarning(
+                f"Images of field '{field}' may not be image files since the header does not contain a 'RADESYS' entry."
+            )
+
         cutouts = []
         wcs_ = []
         for coord in skycoord_coordinates:
-            if self.stokes_axis or self.spectral_axis:
+            if self.spectral_axis:
                 region = regions.RectanglePixelRegion(
                     regions.PixCoord.from_sky(coord, wcs, 0, "wcs"),
                     self.cutout_width,
@@ -214,7 +220,9 @@ class CataData:
             raise NotImplementedError("Currently only fits format supported.")
         return
 
-    def plot(self, index: int) -> None:
+    def plot(
+        self, index: int, contours: bool = False, sigma_name: str = "ISL_RMS"
+    ) -> None:
         """Plot the source with the given index.
 
         Args:
@@ -233,11 +241,12 @@ class CataData:
         plt.subplot(projection=wcs)
         plt.imshow(image, origin="lower", cmap="Greys")
         plt.colorbar()
-        plt.contour(
-            image,
-            levels=[self.df.iloc[index]["ISL_RMS"] * (3 + n) for n in range(3)],
-            origin="lower",
-        )
+        if contours:
+            plt.contour(
+                image,
+                levels=[self.df.iloc[index][sigma_name] * (3 + n) for n in range(3)],
+                origin="lower",
+            )
         plt.plot(
             (self.cutout_width // 2, self.cutout_width // 2),
             (0, self.cutout_width - 1),
@@ -299,7 +308,6 @@ class CataData:
                 wcs[field] = cube.wcs
 
             return cubes, wcs
-
         else:
             images, wcs = {}, {}
             for image_path, field in zip(self.image_paths, self.field_names):
@@ -344,7 +352,13 @@ class CataData:
         Returns:
             Union[Table, pd.DataFrame]: _description_
         """
-        table = Table.read(path, memmap=True, format="fits")
+        if path[-4:]=='fits':
+            table = Table.read(path, memmap=True, format="fits")
+        elif path[-4:]=='.txt':
+            table = Table.read(path, format="ascii.commented_header")
+        else:
+            print("Catalogue format not recognised")
+
         if pandas:
             return table.to_pandas()
         else:
