@@ -352,7 +352,13 @@ class CataData:
         Returns:
             Union[Table, pd.DataFrame]: _description_
         """
-        table = Table.read(path, memmap=True, format="fits")
+        if path[-4:]=='fits':
+            table = Table.read(path, memmap=True, format="fits")
+        elif path[-4:]=='.txt':
+            table = Table.read(path, format="ascii.commented_header")
+        else:
+            print("Catalogue format not recognised")
+
         if pandas:
             return table.to_pandas()
         else:
