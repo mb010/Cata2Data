@@ -15,6 +15,7 @@ from astropy.wcs import WCS
 from spectral_cube import SpectralCube, StokesSpectralCube
 from pathlib import Path
 
+
 class CataData:
     """A class taking fits catalogues and images and producing
     a data set for deep learning."""
