@@ -13,7 +13,7 @@ from astropy.table import Table
 from astropy.units import Quantity
 from astropy.wcs import WCS
 from spectral_cube import SpectralCube, StokesSpectralCube
-
+from pathlib import Path
 
 class CataData:
     """A class taking fits catalogues and images and producing
@@ -340,7 +340,7 @@ class CataData:
         return data, wcs
 
     def open_catalogue(
-        self, path: str, pandas: bool = True, format: str = "fits"
+        self, path: str, pandas: bool = True
     ) -> Union[Table, pd.DataFrame]:
         """Opens a catalogue either as pandas dataframe or astropy Table object.
 
@@ -352,12 +352,16 @@ class CataData:
         Returns:
             Union[Table, pd.DataFrame]: _description_
         """
-        if path[-4:]=='fits':
-            table = Table.read(path, memmap=True, format="fits")
-        elif path[-4:]=='.txt':
-            table = Table.read(path, format="ascii.commented_header")
+        _path = Path(path)
+        if _path.is_file():
+            if _path.suffix == ".fits":
+                table = Table.read(path, memmap=True, format="fits")
+            elif _path.suffix == ".txt":
+                table = Table.read(path, format="ascii.commented_header")
+            else:
+                raise ValueError("Catalogue format not recognised")
         else:
-            print("Catalogue format not recognised")
+            raise ValueError("The path parameter is not a file.")
 
         if pandas:
             return table.to_pandas()

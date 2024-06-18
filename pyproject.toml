@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=65.5.0", "setuptools-scm", "wheel"]
+requires = ["setuptools>=70.0.0", "setuptools-scm", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,15 +10,25 @@ authors = [
 maintainers = [
     {name = "Micah Bowles", email = "micah.bowles@postgrad.manchester.ac.uk"},
 ]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU GPLv3",
+  "Operating System :: OS Independent"
+]
+dependencies = [
+    "astropy==5.2.1",
+    "matplotlib==3.6.3",
+    "numpy==1.24.2",
+    "pandas==1.5.3",
+    "regions==0.7",
+    "spectral-cube==0.6.0"
+]
 description = "Produce a loadable data set from a catalogue"
 readme = "README.md"
-license = {text = "GNU GPL"}
+license = {file = "LICENSE"}
 requires-python = ">=3.9"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent"
-]
-dynamic = ["version", "dependencies"]
+
+dynamic = ["version"]
 
 [project.urls]
 Source = "https://github.com/mbowles/cata2data"
@@ -32,4 +42,5 @@ include = ["cata2data*"]
 namespaces = false
 
 [tool.setuptools_scm]
-write_to = "src/_version.py"
+local_scheme = "no-local-version"
+write_to = "src/cata2data/_version.py"
