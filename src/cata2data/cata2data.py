@@ -27,6 +27,7 @@ class CataData:
         field_names: Union[List[int], List[str], str],
         cutout_shape: Union[int, Sequence[Union[int, str]]] = (32, 32),
         memmap: bool = True,
+        targets: bool = False,
         transform: Optional[Callable] = None,
         catalogue_preprocessing: Optional[Callable] = None,
         wcs_preprocessing: Optional[Callable] = None,
@@ -84,6 +85,7 @@ class CataData:
         self.field_names = field_names if type(field_names) is list else [field_names]
         self.fits_index_catalogue = fits_index_catalogue
         self.fits_index_images = fits_index_images
+        self.targets = targets
 
         # Checks
         self._verify_input_lengths()
@@ -127,8 +129,9 @@ class CataData:
         field = self.df.iloc[index].field
         return_wcs = True if (self.return_wcs or force_return_wcs) else False
         height, width = self.__get_cutout_size__(index)
-        if self.labels:
-            return self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs), self.df.iloc[index].values
+        if self.targets:
+            # Return all values in the row except for the coordinates
+            return self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs), self.df.iloc[index].drop(["ra", "dec"]).values
         return self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
 
     def __len__(self) -> int:
