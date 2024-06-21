@@ -31,6 +31,7 @@ class CataData:
         catalogue_preprocessing: Optional[Callable] = None,
         image_preprocessing: Optional[Callable] = None,
         wcs_preprocessing: Optional[Callable] = None,
+        targets: Optional[List[str]] = None,
         fits_index_catalogue: int = 1,
         fits_index_images: int = 0,
         image_drop_axes: List[int] = [3, 2],
@@ -86,6 +87,8 @@ class CataData:
         self.catalogue_preprocessing = catalogue_preprocessing
         self.image_preprocessing = image_preprocessing
         self.wcs_preprocessing = wcs_preprocessing
+        
+        self.targets = targets
 
         # if transform is albumentations transform do ...
         self.transform = transform
