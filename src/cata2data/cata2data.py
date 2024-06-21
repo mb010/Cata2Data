@@ -27,7 +27,7 @@ class CataData:
         field_names: Union[List[int], List[str], str],
         cutout_shape: Union[int, Sequence[Union[int, str]]] = (32, 32),
         memmap: bool = True,
-        targets: bool = False,
+        targets: Optional[List[str]] = None,
         transform: Optional[Callable] = None,
         catalogue_preprocessing: Optional[Callable] = None,
         wcs_preprocessing: Optional[Callable] = None,
@@ -130,8 +130,8 @@ class CataData:
         return_wcs = True if (self.return_wcs or force_return_wcs) else False
         height, width = self.__get_cutout_size__(index)
         if self.targets:
-            # Return all values in the row except for the coordinates
-            return self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs), self.df.iloc[index].drop(["ra", "dec"]).values
+            target_columns = self.df.columns[self.df.columns.str.contains(self.targets)]
+            return self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs), self.df.iloc[index][target_columns].values
         return self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
 
     def __len__(self) -> int:
