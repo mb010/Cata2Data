@@ -27,7 +27,9 @@ class CataData:
         cutout_width: Union[int, Quantity] = 32,
         memmap: bool = True,
         transform: Optional[Callable] = None,
+        target = None,
         catalogue_preprocessing: Optional[Callable] = None,
+        image_preprocessing: Optional[Callable] = None,
         wcs_preprocessing: Optional[Callable] = None,
         fits_index_catalogue: int = 1,
         fits_index_images: int = 0,
@@ -55,6 +57,8 @@ class CataData:
                 Transformations to use. Currently not implemented. Defaults to None.
             catalogue_preprocessing (Optional[Callable], optional):
                 Function to apply to catalogues before use. Ideal for filtering to subsamples. Defaults to None.
+            image_preprocessing (Optional[Callable], optional):
+                Function to apply to images before use. Defaults to None.
             wcs_preprocessing (Optional[Callable], optional):
                 Function applied to the astropy wcs object before selecting data from the images. Defaults to None.
             fits_index_catalogue (int, optional): Index used in self.open_fits call. Selects correct wcs entry for
@@ -80,6 +84,7 @@ class CataData:
         self._check_exists()
 
         self.catalogue_preprocessing = catalogue_preprocessing
+        self.image_preprocessing = image_preprocessing
         self.wcs_preprocessing = wcs_preprocessing
 
         # if transform is albumentations transform do ...
@@ -113,7 +118,22 @@ class CataData:
         coords = self.df.iloc[index : index + 1][["ra", "dec"]].values
         field = self.df.iloc[index].field
         return_wcs = True if (self.return_wcs or force_return_wcs) else False
-        return self.cutout(coords, field=field, return_wcs=return_wcs)
+        
+        if return_wcs:
+            img, wcs_ = self.cutout(coords, field=field, return_wcs=return_wcs)
+        else:
+            img = self.cutout(coords, field=field, return_wcs=return_wcs)
+        
+        img = np.reshape(img,(self.cutout_width,self.cutout_width))
+        
+        # this needs to be done here and not in self.cutout so it gets applied
+        # dynamically by the dataloader (which calls getitem)
+        if self.transform is not None:
+            img = self.transform(img)
+        
+        if return_wcs:
+            return img, wcs_
+        return img
 
     def __len__(self) -> int:
         """Returns the length of the processed catalogue. Necessary for pytorch dataloaders.
@@ -198,6 +218,9 @@ class CataData:
                 if return_wcs:
                     wcs_.append(cutout.wcs)
 
+        if self.image_preprocessing is not None:
+            cutouts = self.image_preprocessing(cutouts)
+
         if return_wcs:
             return np.stack(cutouts), wcs_
         return np.stack(cutouts)
@@ -236,7 +259,8 @@ class CataData:
 
         crosshair_alpha = 0.3
         image, wcs = self.__getitem__(index, force_return_wcs=True)
-        image = np.squeeze(image[0])
+        #image = np.squeeze(image[0])
+        image = np.squeeze(image)
         wcs = wcs[0]
         plt.subplot(projection=wcs)
         plt.imshow(image, origin="lower", cmap="Greys")
