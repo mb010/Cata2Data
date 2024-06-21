@@ -54,6 +54,8 @@ class CataData:
                 Shape of the cutout. Defaults to (32, 32). If strings are provided, these are used as keys to the catalogue to extract the shape for each entry.
             memmap (bool, optional):
                 Whether to use memory mapping (dynamic reading of images into memory). Defaults to False.
+            targets (bool, optional):
+                Column names of the targets in the catalogue. Defaults to None.
             transform (Optional[Callable], optional):
                 Transformations to use. Currently not implemented. Defaults to None.
             catalogue_preprocessing (Optional[Callable], optional):
@@ -94,7 +96,6 @@ class CataData:
         self.catalogue_preprocessing = catalogue_preprocessing
         self.wcs_preprocessing = wcs_preprocessing
 
-        # if transform is albumentations transform do ... # TODO
         self.transform = transform
 
         self.memmap = memmap
@@ -129,10 +130,14 @@ class CataData:
         field = self.df.iloc[index].field
         return_wcs = True if (self.return_wcs or force_return_wcs) else False
         height, width = self.__get_cutout_size__(index)
+        img = self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
+        if self.transform:
+            img = self.transform(img)
         if self.targets:
+            targets = self.df.iloc[index][target_columns].values
             target_columns = self.df.columns[self.df.columns.str.contains(self.targets)]
-            return self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs), self.df.iloc[index][target_columns].values
-        return self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
+            return img, targets
+        return img
 
     def __len__(self) -> int:
         """Returns the length of the processed catalogue. Necessary for pytorch dataloaders.
