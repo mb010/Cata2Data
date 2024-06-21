@@ -201,8 +201,8 @@ class CataData:
             if self.spectral_axis:
                 region = regions.RectanglePixelRegion(
                     regions.PixCoord.from_sky(coord, wcs),
-                    self.cutout_width,
-                    self.cutout_width,
+                    height,
+                    width,
                 )
                 if self.stokes_axis:
                     cutout = []
