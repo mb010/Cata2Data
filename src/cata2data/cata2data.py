@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Sequence
 
 import astropy.units as units
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import numpy as np
 import pandas as pd
 import regions
@@ -259,7 +260,7 @@ class CataData:
         return
 
     def plot(
-        self, index: int, contours: bool = False, sigma_name: str = "ISL_RMS"
+        self, index: int, contours: bool = False, sigma_name: str = "ISL_RMS", min_sigma: int = 3, log_scaling: bool = False
     ) -> None:
         """Plot the source with the given index.
 
@@ -278,12 +279,12 @@ class CataData:
         wcs = wcs[0]
         height, width = self.__get_cutout_size__(index)
         plt.subplot(projection=wcs)
-        plt.imshow(image, origin="lower", cmap="Greys")
+        plt.imshow(image, origin="lower", cmap="Greys",  norm=colors.LogNorm() if log_scaling else None)
         plt.colorbar()
         if contours:
             plt.contour(
                 image,
-                levels=[self.df.iloc[index][sigma_name] * (3 + n) for n in range(3)],
+                levels=[self.df.iloc[index][sigma_name] * (min_sigma + n) for n in range(3)],
                 origin="lower",
             )
         plt.hlines(
