@@ -14,6 +14,7 @@ from astropy.table import Table
 from astropy.units import Quantity
 from astropy.wcs import WCS
 from spectral_cube import SpectralCube, StokesSpectralCube
+from pathlib import Path
 
 
 class CataData:
@@ -208,7 +209,7 @@ class CataData:
         for coord in skycoord_coordinates:
             if self.spectral_axis:
                 region = regions.RectanglePixelRegion(
-                    regions.PixCoord.from_sky(coord, wcs),
+                    regions.PixCoord.from_sky(coord, wcs, 0, "wcs"),
                     height,
                     width,
                 )
@@ -220,7 +221,7 @@ class CataData:
                             ._stokes_data[component]
                             .subcube_from_regions([region])
                         )
-                        cutout.append(np.asarray(cutout_.unmasked_data[:]))
+                        cutout.append(cutout_.unmasked_data[:].value)
                         wcs_.append({component: cutout_.wcs})
                     cutouts.append(np.stack(cutout))
                 else:
@@ -388,7 +389,7 @@ class CataData:
         return data, wcs
 
     def open_catalogue(
-        self, path: str, pandas: bool = True, format: str = "fits"
+        self, path: str, pandas: bool = True
     ) -> Union[Table, pd.DataFrame]:
         """Opens a catalogue either as pandas dataframe or astropy Table object.
 
@@ -400,7 +401,17 @@ class CataData:
         Returns:
             Union[Table, pd.DataFrame]: _description_
         """
-        table = Table.read(path, memmap=True, format="fits")
+        _path = Path(path)
+        if _path.is_file():
+            if _path.suffix == ".fits":
+                table = Table.read(path, memmap=True, format="fits")
+            elif _path.suffix == ".txt":
+                table = Table.read(path, format="ascii.commented_header")
+            else:
+                raise ValueError("Catalogue format not recognised")
+        else:
+            raise ValueError("The path parameter is not a file.")
+
         if pandas:
             return table.to_pandas()
         else:
