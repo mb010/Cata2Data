@@ -1,8 +1,9 @@
 import os
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Sequence
 
 import astropy.units as units
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import numpy as np
 import pandas as pd
 import regions
@@ -24,9 +25,10 @@ class CataData:
         self,
         catalogue_paths: Union[List[str], str],
         image_paths: Union[List[str], str],
-        field_names: Union[List[Union[int, int]], str],
-        cutout_width: Union[int, Quantity] = 32,
+        field_names: Union[List[int], List[str], str],
+        cutout_shape: Union[int, Sequence[Union[int, str]]] = (32, 32),
         memmap: bool = True,
+        targets: Optional[List[str]] = None,
         transform: Optional[Callable] = None,
         catalogue_preprocessing: Optional[Callable] = None,
         wcs_preprocessing: Optional[Callable] = None,
@@ -37,6 +39,7 @@ class CataData:
         spectral_axis: bool = False,
         stokes_axis: bool = False,
         return_wcs: bool = False,
+        fill_value: float = 0.0,
     ) -> None:
         """Produces a deep learning ready data set from fits catalogues
         and fits images.
@@ -48,24 +51,34 @@ class CataData:
                 Fits image path(s) in matching order.
             field_names (List[str  |  int] | str):
                 Names of the field(s) in matching order.
-            cutout_width (int, optional):
-                Cut out pixel width. Defaults to 32.
+            cutout_shape (Union[int, Sequence[int], Sequence[str]], optional):
+                Shape of the cutout. Defaults to (32, 32). If strings are provided, these are used as keys to the catalogue to extract the shape for each entry.
             memmap (bool, optional):
                 Whether to use memory mapping (dynamic reading of images into memory). Defaults to False.
+            targets (bool, optional):
+                Column names of the targets in the catalogue. Defaults to None.
             transform (Optional[Callable], optional):
                 Transformations to use. Currently not implemented. Defaults to None.
             catalogue_preprocessing (Optional[Callable], optional):
                 Function to apply to catalogues before use. Ideal for filtering to subsamples. Defaults to None.
             wcs_preprocessing (Optional[Callable], optional):
                 Function applied to the astropy wcs object before selecting data from the images. Defaults to None.
-            fits_index_catalogue (int, optional): Index used in self.open_fits call. Selects correct wcs entry for
-            respective catalogues. Ordered appropriately with paths. Defaults to 1.
-            fits_index_images (int, optional): Index used in self.open_fits call. Selects correct wcs entry for
-            respective images. Ordered appropriately with paths. Defaults to 0.
-            image_drop_axes (List[int], optional): Not Implemented. Defaults to [3,2].
-            origin (int, optional): Wcs origin. Used in cutout to calculated wcs.world2pix coords. Defaults to 1.
-            spectral_axis (bool): TO BE COMPLETED. Detaults to False.
-            stokes_axis (bool): TO BE COMPLETED. Defaults to False.
+            fits_index_catalogue (int, optional):
+                Index used in self.open_fits call. Selects correct wcs entry for
+                respective catalogues. Ordered appropriately with paths. Defaults to 1.
+            fits_index_images (int, optional):
+                Index used in self.open_fits call. Selects correct wcs entry for
+                respective images. Ordered appropriately with paths. Defaults to 0.
+            image_drop_axes (List[int], optional):
+                Not Implemented. Defaults to [3,2].
+            origin (int, optional):
+                Wcs origin. Used in cutout to calculated wcs.world2pix coords. Defaults to 1.
+            spectral_axis (bool):
+                TO BE COMPLETED. Detaults to False.
+            stokes_axis (bool):
+                TO BE COMPLETED. Defaults to False.
+            fill_value (float):
+                Value which cutouts should be padded with if there isn't full coverage. Defaults to 0.
 
         """
         self.catalogue_paths = (
@@ -75,6 +88,7 @@ class CataData:
         self.field_names = field_names if type(field_names) is list else [field_names]
         self.fits_index_catalogue = fits_index_catalogue
         self.fits_index_images = fits_index_images
+        self.targets = targets
 
         # Checks
         self._verify_input_lengths()
@@ -83,16 +97,18 @@ class CataData:
         self.catalogue_preprocessing = catalogue_preprocessing
         self.wcs_preprocessing = wcs_preprocessing
 
-        # if transform is albumentations transform do ...
         self.transform = transform
 
         self.memmap = memmap
         self.origin = origin
-        self.cutout_width = cutout_width
+        if isinstance(cutout_shape, int) or isinstance(cutout_shape, float):
+            cutout_shape = (int(cutout_shape), int(cutout_shape))
+        self.cutout_width, self.cutout_height = cutout_shape
         self.spectral_axis = spectral_axis
         self.stokes_axis = stokes_axis
         self.return_wcs = return_wcs
 
+        self.fill_value = fill_value
         self.df = self._build_df()
         self.images, self.wcs = self._build_images(image_drop_axes)
 
@@ -114,7 +130,15 @@ class CataData:
         coords = self.df.iloc[index : index + 1][["ra", "dec"]].values
         field = self.df.iloc[index].field
         return_wcs = True if (self.return_wcs or force_return_wcs) else False
-        return self.cutout(coords, field=field, return_wcs=return_wcs)
+        height, width = self.__get_cutout_size__(index)
+        img = self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
+        if self.transform:
+            img = self.transform(img)
+        if self.targets:
+            targets = self.df.iloc[index][target_columns].values
+            target_columns = self.df.columns[self.df.columns.str.contains(self.targets)]
+            return img, targets
+        return img
 
     def __len__(self) -> int:
         """Returns the length of the processed catalogue. Necessary for pytorch dataloaders.
@@ -123,15 +147,38 @@ class CataData:
             int: Data set length.
         """
         return len(self.df)
+    
+    def __get_cutout_size__(self, index: int) -> tuple:
+        """Returns the size of the cutout at the given index.
+
+        Args:
+            index (int): Index of the cutout.
+
+        Returns:
+            tuple: Size of the cutout.
+        """
+        size = []
+        for dimension in [self.cutout_height, self.cutout_width]:
+            if isinstance(dimension, str):
+                if dimension not in self.df.columns:
+                    raise ValueError(f"Column '{dimension}' not found in catalogue.")
+                size.append(self.df.iloc[index][dimension])
+            # If numeric
+            elif isinstance(dimension, (int, float)):
+                size.append(int(dimension))
+            else:
+                raise ValueError("Cutout dimensions must be strings or numeric values.")
+        height, width = size
+        return height, width
 
     def cutout(
-        self, coords: np.ndarray, field: Union[str, int], return_wcs: bool = False
+        self, coords: np.ndarray, field: Union[str, int], height: int, width: int, return_wcs: bool = False,
     ) -> Union[tuple, np.ndarray]:
         """Produces a set of images based on the provided
         coordinates and field.
 
         Args:
-            coords (np.ndarray): Source coordinates.
+            coords (np.ndarray): Source coordinates (ra, dec).
             field (Union[str, int]): Field name or number.
             return_wcs (bool, optional): Whether to return the coordinate objects of the cutouts. Defaults to False.
 
@@ -163,8 +210,8 @@ class CataData:
             if self.spectral_axis:
                 region = regions.RectanglePixelRegion(
                     regions.PixCoord.from_sky(coord, wcs, 0, "wcs"),
-                    self.cutout_width,
-                    self.cutout_width,
+                    height,
+                    width,
                 )
                 if self.stokes_axis:
                     cutout = []
@@ -187,12 +234,12 @@ class CataData:
                     data=np.squeeze(self.images[field]),
                     position=coord,
                     size=(
-                        self.cutout_width,
-                        self.cutout_width,
-                    ),  # Could be anything? Or just unconstrained?
+                        height,
+                        width,
+                    ),
                     wcs=self.wcs[field],
                     mode="partial",
-                    fill_value=0,
+                    fill_value=self.fill_value,
                 )
                 wcs = cutout.wcs
                 cutouts.append(cutout.data)
@@ -222,7 +269,7 @@ class CataData:
         return
 
     def plot(
-        self, index: int, contours: bool = False, sigma_name: str = "ISL_RMS"
+        self, index: int, contours: bool = False, sigma_name: str = "ISL_RMS", min_sigma: int = 3, log_scaling: bool = False
     ) -> None:
         """Plot the source with the given index.
 
@@ -239,33 +286,34 @@ class CataData:
         image, wcs = self.__getitem__(index, force_return_wcs=True)
         image = np.squeeze(image[0])
         wcs = wcs[0]
+        height, width = self.__get_cutout_size__(index)
         plt.subplot(projection=wcs)
-        plt.imshow(image, origin="lower", cmap="Greys")
+        plt.imshow(image, origin="lower", cmap="Greys",  norm=colors.LogNorm() if log_scaling else None)
         plt.colorbar()
         if contours:
             plt.contour(
                 image,
-                levels=[self.df.iloc[index][sigma_name] * (3 + n) for n in range(3)],
+                levels=[self.df.iloc[index][sigma_name] * (min_sigma + n) for n in range(3)],
                 origin="lower",
             )
-        plt.plot(
-            (self.cutout_width // 2, self.cutout_width // 2),
-            (0, self.cutout_width - 1),
+        plt.hlines(
+            height // 2,
+            0,
+            width - 1,
             color="red",
             linewidth=2,
             ls="--",
             alpha=crosshair_alpha,
         )
-        plt.plot(
-            (0, self.cutout_width - 1),
-            (self.cutout_width // 2, self.cutout_width // 2),
+        plt.vlines(
+            width // 2,
+            0,
+            height - 1,
             color="red",
             linewidth=2,
             ls="--",
             alpha=crosshair_alpha,
         )
-        plt.xlim(0, self.cutout_width - 1)
-        plt.ylim(0, self.cutout_width - 1)
         plt.show()
 
     def _build_df(self) -> pd.DataFrame:
