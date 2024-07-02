@@ -30,8 +30,11 @@ class CataData:
         memmap: bool = True,
         targets: Optional[List[str]] = None,
         transform: Optional[Callable] = None,
+        target = None,
         catalogue_preprocessing: Optional[Callable] = None,
+        image_preprocessing: Optional[Callable] = None,
         wcs_preprocessing: Optional[Callable] = None,
+        targets: Optional[List[str]] = None,
         fits_index_catalogue: int = 1,
         fits_index_images: int = 0,
         image_drop_axes: List[int] = [3, 2],
@@ -61,6 +64,8 @@ class CataData:
                 Transformations to use. Currently not implemented. Defaults to None.
             catalogue_preprocessing (Optional[Callable], optional):
                 Function to apply to catalogues before use. Ideal for filtering to subsamples. Defaults to None.
+            image_preprocessing (Optional[Callable], optional):
+                Function to apply to images before use. Defaults to None.
             wcs_preprocessing (Optional[Callable], optional):
                 Function applied to the astropy wcs object before selecting data from the images. Defaults to None.
             fits_index_catalogue (int, optional):
@@ -95,7 +100,10 @@ class CataData:
         self._check_exists()
 
         self.catalogue_preprocessing = catalogue_preprocessing
+        self.image_preprocessing = image_preprocessing
         self.wcs_preprocessing = wcs_preprocessing
+        
+        self.targets = targets
 
         self.transform = transform
 
@@ -130,15 +138,23 @@ class CataData:
         coords = self.df.iloc[index : index + 1][["ra", "dec"]].values
         field = self.df.iloc[index].field
         return_wcs = True if (self.return_wcs or force_return_wcs) else False
+
         height, width = self.__get_cutout_size__(index)
-        img = self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
+        if return_wcs:
+            img, wcs_ = self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
+        else:
+            img = self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
         if self.transform:
             img = self.transform(img)
+                if self.targets:
+            targets = self.df.iloc[index][self.targets].values
+            
+        output = (img,)
         if self.targets:
-            targets = self.df.iloc[index][target_columns].values
-            target_columns = self.df.columns[self.df.columns.str.contains(self.targets)]
-            return img, targets
-        return img
+            output += (targets,)
+        if return_wcs:
+            output += (wcs_,)
+        return output
 
     def __len__(self) -> int:
         """Returns the length of the processed catalogue. Necessary for pytorch dataloaders.
@@ -246,6 +262,9 @@ class CataData:
                 if return_wcs:
                     wcs_.append(cutout.wcs)
 
+        if self.image_preprocessing is not None:
+            cutouts = self.image_preprocessing(cutouts)
+
         if return_wcs:
             return np.stack(cutouts), wcs_
         return np.stack(cutouts)
@@ -259,7 +278,12 @@ class CataData:
         """
         if self.spectral_axis:
             raise NotImplementedError
-        cutout, wcs = self.__getitem__(index, force_return_wcs=True)
+            
+        if self.targets:
+            cutout, _, wcs = self.__getitem__(index, force_return_wcs=True)
+        else:
+            cutout, wcs = self.__getitem__(index, force_return_wcs=True)
+            
         wcs = wcs[0]  # unpack extract dimension
         cutout = cutout[0]
         if format == "fits":
@@ -284,7 +308,8 @@ class CataData:
 
         crosshair_alpha = 0.3
         image, wcs = self.__getitem__(index, force_return_wcs=True)
-        image = np.squeeze(image[0])
+        #image = np.squeeze(image[0])
+        image = np.squeeze(image)
         wcs = wcs[0]
         height, width = self.__get_cutout_size__(index)
         plt.subplot(projection=wcs)
