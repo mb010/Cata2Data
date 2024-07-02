@@ -30,11 +30,8 @@ class CataData:
         memmap: bool = True,
         targets: Optional[List[str]] = None,
         transform: Optional[Callable] = None,
-        target = None,
         catalogue_preprocessing: Optional[Callable] = None,
-        image_preprocessing: Optional[Callable] = None,
         wcs_preprocessing: Optional[Callable] = None,
-        targets: Optional[List[str]] = None,
         fits_index_catalogue: int = 1,
         fits_index_images: int = 0,
         image_drop_axes: List[int] = [3, 2],
@@ -64,8 +61,6 @@ class CataData:
                 Transformations to use. Currently not implemented. Defaults to None.
             catalogue_preprocessing (Optional[Callable], optional):
                 Function to apply to catalogues before use. Ideal for filtering to subsamples. Defaults to None.
-            image_preprocessing (Optional[Callable], optional):
-                Function to apply to images before use. Defaults to None.
             wcs_preprocessing (Optional[Callable], optional):
                 Function applied to the astropy wcs object before selecting data from the images. Defaults to None.
             fits_index_catalogue (int, optional):
@@ -100,7 +95,6 @@ class CataData:
         self._check_exists()
 
         self.catalogue_preprocessing = catalogue_preprocessing
-        self.image_preprocessing = image_preprocessing
         self.wcs_preprocessing = wcs_preprocessing
         
         self.targets = targets
@@ -146,9 +140,9 @@ class CataData:
             img = self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
         if self.transform:
             img = self.transform(img)
-                if self.targets:
+        if self.targets:
             targets = self.df.iloc[index][self.targets].values
-            
+
         output = (img,)
         if self.targets:
             output += (targets,)
@@ -262,14 +256,11 @@ class CataData:
                 if return_wcs:
                     wcs_.append(cutout.wcs)
 
-        if self.image_preprocessing is not None:
-            cutouts = self.image_preprocessing(cutouts)
-
         if return_wcs:
             return np.stack(cutouts), wcs_
         return np.stack(cutouts)
 
-    def save_cutout(path: str, index: int, format: str = "fits") -> None:
+    def save_cutout(self, path: str, index: int, format: str = "fits") -> None:
         """Saves the cutout of the respective index.
         Args:
             path (str): Path which the file should be saved to.
