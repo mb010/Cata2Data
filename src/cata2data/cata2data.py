@@ -28,7 +28,7 @@ class CataData:
         field_names: Union[List[int], List[str], str],
         cutout_shape: Union[int, Sequence[Union[int, str]]] = (32, 32),
         memmap: bool = True,
-        targets: Optional[List[str]] = None,
+        targets: Union[Optional[str], List[str]] = None,
         transform: Optional[Callable] = None,
         catalogue_preprocessing: Optional[Callable] = None,
         wcs_preprocessing: Optional[Callable] = None,
@@ -56,7 +56,7 @@ class CataData:
             memmap (bool, optional):
                 Whether to use memory mapping (dynamic reading of images into memory). Defaults to False.
             targets (bool, optional):
-                Column names of the targets in the catalogue. Defaults to None.
+                Column names of the targets in the catalogue. If it is a string, it is converted to a list of length 1. Defaults to None.
             transform (Optional[Callable], optional):
                 Transformations to use. Currently not implemented. Defaults to None.
             catalogue_preprocessing (Optional[Callable], optional):
@@ -88,7 +88,7 @@ class CataData:
         self.field_names = field_names if type(field_names) is list else [field_names]
         self.fits_index_catalogue = fits_index_catalogue
         self.fits_index_images = fits_index_images
-        self.targets = targets
+        self.targets = targets if isinstance(targets, list) else [targets]
 
         # Checks
         self._verify_input_lengths()
@@ -97,8 +97,6 @@ class CataData:
         self.catalogue_preprocessing = catalogue_preprocessing
         self.wcs_preprocessing = wcs_preprocessing
         
-        self.targets = targets
-
         self.transform = transform
 
         self.memmap = memmap
@@ -284,7 +282,7 @@ class CataData:
         return
 
     def plot(
-        self, index: int, contours: bool = False, sigma_name: str = "ISL_RMS", min_sigma: int = 3, log_scaling: bool = False
+        self, index: int, contours: bool = False, sigma_name: str = "ISL_RMS", min_sigma: int = 3, log_scaling: bool = False, title: str = None,
     ) -> None:
         """Plot the source with the given index.
 
@@ -298,13 +296,16 @@ class CataData:
             return
 
         crosshair_alpha = 0.3
-        image, wcs = self.__getitem__(index, force_return_wcs=True)
+        out = self.__getitem__(index, force_return_wcs=True)
+        image, wcs = out[0], out[2] if self.targets else out
         #image = np.squeeze(image[0])
         image = np.squeeze(image)
         wcs = wcs[0]
         height, width = self.__get_cutout_size__(index)
         plt.subplot(projection=wcs)
         plt.imshow(image, origin="lower", cmap="Greys",  norm=colors.LogNorm() if log_scaling else None)
+        if title:
+            plt.title(title)
         plt.colorbar()
         if contours:
             plt.contour(
@@ -312,24 +313,8 @@ class CataData:
                 levels=[self.df.iloc[index][sigma_name] * (min_sigma + n) for n in range(3)],
                 origin="lower",
             )
-        plt.hlines(
-            height // 2,
-            0,
-            width - 1,
-            color="red",
-            linewidth=2,
-            ls="--",
-            alpha=crosshair_alpha,
-        )
-        plt.vlines(
-            width // 2,
-            0,
-            height - 1,
-            color="red",
-            linewidth=2,
-            ls="--",
-            alpha=crosshair_alpha,
-        )
+        plt.axhline(height // 2, color="red", linewidth=2, ls="--", alpha=crosshair_alpha)
+        plt.axvline(width // 2, color="red", linewidth=2, ls="--", alpha=crosshair_alpha)
         plt.show()
 
     def _build_df(self) -> pd.DataFrame:
