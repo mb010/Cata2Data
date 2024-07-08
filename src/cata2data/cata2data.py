@@ -282,7 +282,7 @@ class CataData:
         return
 
     def plot(
-        self, index: int, contours: bool = False, sigma_name: str = "ISL_RMS", min_sigma: int = 3, log_scaling: bool = False
+        self, index: int, contours: bool = False, sigma_name: str = "ISL_RMS", min_sigma: int = 3, log_scaling: bool = False, title: str = None,
     ) -> None:
         """Plot the source with the given index.
 
@@ -304,6 +304,8 @@ class CataData:
         height, width = self.__get_cutout_size__(index)
         plt.subplot(projection=wcs)
         plt.imshow(image, origin="lower", cmap="Greys",  norm=colors.LogNorm() if log_scaling else None)
+        if title:
+            plt.title(title)
         plt.colorbar()
         if contours:
             plt.contour(
@@ -311,24 +313,8 @@ class CataData:
                 levels=[self.df.iloc[index][sigma_name] * (min_sigma + n) for n in range(3)],
                 origin="lower",
             )
-        plt.hlines(
-            height // 2,
-            0,
-            width - 1,
-            color="red",
-            linewidth=2,
-            ls="--",
-            alpha=crosshair_alpha,
-        )
-        plt.vlines(
-            width // 2,
-            0,
-            height - 1,
-            color="red",
-            linewidth=2,
-            ls="--",
-            alpha=crosshair_alpha,
-        )
+        plt.axhline(height // 2, color="red", linewidth=2, ls="--", alpha=crosshair_alpha)
+        plt.axvline(width // 2, color="red", linewidth=2, ls="--", alpha=crosshair_alpha)
         plt.show()
 
     def _build_df(self) -> pd.DataFrame:
