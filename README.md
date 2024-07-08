@@ -30,9 +30,12 @@ dataloader = DataLoader(data, batch_size=64, shuffle=True)
 ```
 
 # Features
-See the doc strings for detailed notes on all of the parameters which CataData accepts. Specifically, consider the cutout size, memmory mapping (`mmap`) and the various pre-processing options to match your needs.
+See the doc strings for detailed notes on all of the parameters which CataData accepts. The main features are:
+- Memmory mapping (`mmap`)
+- Image size for the loadable dataset can be set for the whole dataset, or
+- Cutout sizes can be controlled by the catalog on a source by source basis, including for non uniform cutout heights and widths.
 
-> :warning: Note that currently catalogues are indexed through their `"RA"`" and `"DEC"` columns. Use the `catalogue_preprocessing` parameter to correctly name the columns until this has a better fix.
+> :warning: Note that currently catalogues are indexed through their `"ra"`" and `"dec"` columns. Use the `catalogue_preprocessing` parameter to correctly name the columns.
 
 # Contributing
 [Open an issue](https://github.com/mb010/Cata2Data/issues) and let us know what sort of issue you are experiencing.
