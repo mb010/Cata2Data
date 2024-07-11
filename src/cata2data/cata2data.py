@@ -32,6 +32,7 @@ class CataData:
         transform: Optional[Callable] = None,
         catalogue_preprocessing: Optional[Callable] = None,
         wcs_preprocessing: Optional[Callable] = None,
+        image_preprocessing: Optional[Callable] = None,
         fits_index_catalogue: int = 1,
         fits_index_images: int = 0,
         image_drop_axes: List[int] = [3, 2],
@@ -88,13 +89,18 @@ class CataData:
         self.field_names = field_names if type(field_names) is list else [field_names]
         self.fits_index_catalogue = fits_index_catalogue
         self.fits_index_images = fits_index_images
-        self.targets = targets if isinstance(targets, list) else [targets]
+
+        if targets is not None:
+            self.targets = targets if isinstance(targets, list) else [targets]
+        else:
+            self.targets = targets
 
         # Checks
         self._verify_input_lengths()
         self._check_exists()
 
         self.catalogue_preprocessing = catalogue_preprocessing
+        self.image_preprocessing = image_preprocessing
         self.wcs_preprocessing = wcs_preprocessing
         
         self.transform = transform
@@ -254,6 +260,9 @@ class CataData:
                 if return_wcs:
                     wcs_.append(cutout.wcs)
 
+        if self.image_preprocessing is not None:
+            cutouts = self.image_preprocessing(cutouts)
+
         if return_wcs:
             return np.stack(cutouts), wcs_
         return np.stack(cutouts)
@@ -297,10 +306,13 @@ class CataData:
 
         crosshair_alpha = 0.3
         out = self.__getitem__(index, force_return_wcs=True)
-        image, wcs = out[0], out[2] if self.targets else out
+        #image, wcs = out[0], out[2] if self.targets else out
+        image, wcs = out[0:1]+out[1:2] if self.targets else out
+
         #image = np.squeeze(image[0])
         image = np.squeeze(image)
         wcs = wcs[0]
+        
         height, width = self.__get_cutout_size__(index)
         plt.subplot(projection=wcs)
         plt.imshow(image, origin="lower", cmap="Greys",  norm=colors.LogNorm() if log_scaling else None)
