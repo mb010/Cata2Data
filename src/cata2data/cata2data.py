@@ -306,8 +306,7 @@ class CataData:
 
         crosshair_alpha = 0.3
         out = self.__getitem__(index, force_return_wcs=True)
-        #image, wcs = out[0], out[2] if self.targets else out
-        image, wcs = out[0:1]+out[1:2] if self.targets else out
+        image, wcs = (out[0], out[2]) if self.targets else out
 
         #image = np.squeeze(image[0])
         image = np.squeeze(image)
