@@ -32,7 +32,6 @@ class CataData:
         transform: Optional[Callable] = None,
         catalogue_preprocessing: Optional[Callable] = None,
         wcs_preprocessing: Optional[Callable] = None,
-        image_preprocessing: Optional[Callable] = None,
         fits_index_catalogue: int = 1,
         fits_index_images: int = 0,
         image_drop_axes: List[int] = [3, 2],
@@ -41,6 +40,7 @@ class CataData:
         stokes_axis: bool = False,
         return_wcs: bool = False,
         fill_value: float = 0.0,
+        **kwargs,
     ) -> None:
         """Produces a deep learning ready data set from fits catalogues
         and fits images.
@@ -100,10 +100,9 @@ class CataData:
         self._check_exists()
 
         self.catalogue_preprocessing = catalogue_preprocessing
-        self.image_preprocessing = image_preprocessing
         self.wcs_preprocessing = wcs_preprocessing
-        
         self.transform = transform
+        self.kwargs = kwargs
 
         self.memmap = memmap
         self.origin = origin
@@ -260,8 +259,8 @@ class CataData:
                 if return_wcs:
                     wcs_.append(cutout.wcs)
 
-        if self.image_preprocessing is not None:
-            cutouts = self.image_preprocessing(cutouts)
+        if "image_preprocessing" in self.kwargs.keys():
+            cutouts = self.kwargs["image_preprocessing"](cutouts)
 
         if return_wcs:
             return np.stack(cutouts), wcs_
