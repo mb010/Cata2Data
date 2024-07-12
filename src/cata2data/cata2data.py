@@ -40,6 +40,7 @@ class CataData:
         stokes_axis: bool = False,
         return_wcs: bool = False,
         fill_value: float = 0.0,
+        **kwargs,
     ) -> None:
         """Produces a deep learning ready data set from fits catalogues
         and fits images.
@@ -88,7 +89,11 @@ class CataData:
         self.field_names = field_names if type(field_names) is list else [field_names]
         self.fits_index_catalogue = fits_index_catalogue
         self.fits_index_images = fits_index_images
-        self.targets = targets if isinstance(targets, list) else [targets]
+
+        if targets is not None:
+            self.targets = targets if isinstance(targets, list) else [targets]
+        else:
+            self.targets = targets
 
         # Checks
         self._verify_input_lengths()
@@ -96,8 +101,8 @@ class CataData:
 
         self.catalogue_preprocessing = catalogue_preprocessing
         self.wcs_preprocessing = wcs_preprocessing
-        
         self.transform = transform
+        self.kwargs = kwargs
 
         self.memmap = memmap
         self.origin = origin
@@ -254,6 +259,9 @@ class CataData:
                 if return_wcs:
                     wcs_.append(cutout.wcs)
 
+        if "image_preprocessing" in self.kwargs.keys():
+            cutouts = self.kwargs["image_preprocessing"](cutouts)
+
         if return_wcs:
             return np.stack(cutouts), wcs_
         return np.stack(cutouts)
@@ -297,10 +305,12 @@ class CataData:
 
         crosshair_alpha = 0.3
         out = self.__getitem__(index, force_return_wcs=True)
-        image, wcs = out[0], out[2] if self.targets else out
+        image, wcs = (out[0], out[2]) if self.targets else out
+
         #image = np.squeeze(image[0])
         image = np.squeeze(image)
         wcs = wcs[0]
+        
         height, width = self.__get_cutout_size__(index)
         plt.subplot(projection=wcs)
         plt.imshow(image, origin="lower", cmap="Greys",  norm=colors.LogNorm() if log_scaling else None)
