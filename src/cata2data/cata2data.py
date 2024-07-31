@@ -59,7 +59,7 @@ class CataData:
             targets (bool, optional):
                 Column names of the targets in the catalogue. If it is a string, it is converted to a list of length 1. Defaults to None.
             transform (Optional[Callable], optional):
-                Transformations to use. Currently not implemented. Defaults to None.
+                Transformations to use. Defaults to None. Using torchvision.transforms.v2.ToImage() is recommended.
             catalogue_preprocessing (Optional[Callable], optional):
                 Function to apply to catalogues before use. Ideal for filtering to subsamples. Defaults to None.
             wcs_preprocessing (Optional[Callable], optional):
@@ -142,6 +142,8 @@ class CataData:
         else:
             img = self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
         if self.transform:
+            # NOTE TODO: This should hopefully be a temporary fix so the axes are in the expected order.
+            img = np.transpose(img, (1, 2, 0)) # (C, H, W) -> (H, W, C) which is the expected order for ndarrays
             img = self.transform(img)
         if self.targets:
             targets = self.df.iloc[index][self.targets].values
@@ -262,9 +264,10 @@ class CataData:
         if "image_preprocessing" in self.kwargs.keys():
             cutouts = self.kwargs["image_preprocessing"](cutouts)
 
+        cutouts = np.stack(cutouts)
         if return_wcs:
-            return np.stack(cutouts), wcs_
-        return np.stack(cutouts)
+            return cutouts, wcs_
+        return cutouts
 
     def save_cutout(self, path: str, index: int, format: str = "fits") -> None:
         """Saves the cutout of the respective index.
