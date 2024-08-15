@@ -23,7 +23,7 @@ class CataData:
 
     def __init__(
         self,
-        catalogue_paths: Union[List[str], str],
+        catalogue_paths: Union[List[str], Optional[str]],
         image_paths: Union[List[str], str],
         field_names: Union[List[int], List[str], str],
         cutout_shape: Union[int, Sequence[Union[int, str]]] = (32, 32),
@@ -40,13 +40,14 @@ class CataData:
         stokes_axis: bool = False,
         return_wcs: bool = False,
         fill_value: float = 0.0,
+        overlap: float = 16,
         **kwargs,
     ) -> None:
         """Produces a deep learning ready data set from fits catalogues
         and fits images.
 
         Args:
-            catalogue_paths (List[str] | str):
+            catalogue_paths (List[str] | Optional[str]):
                 Fits catalogue path(s) in matching order.
             image_paths (List[str] | str):
                 Fits image path(s) in matching order.
@@ -82,9 +83,12 @@ class CataData:
                 Value which cutouts should be padded with if there isn't full coverage. Defaults to 0.
 
         """
-        self.catalogue_paths = (
-            catalogue_paths if type(catalogue_paths) is list else [catalogue_paths]
-        )
+        if catalogue_paths is not None:
+            self.catalogue_paths = (
+                catalogue_paths if type(catalogue_paths) is list else [catalogue_paths]
+            )
+        else:
+            self.catalogue_paths = catalogue_paths
         self.image_paths = image_paths if type(image_paths) is list else [image_paths]
         self.field_names = field_names if type(field_names) is list else [field_names]
         self.fits_index_catalogue = fits_index_catalogue
@@ -114,8 +118,8 @@ class CataData:
         self.return_wcs = return_wcs
 
         self.fill_value = fill_value
-        self.df = self._build_df()
         self.images, self.wcs = self._build_images(image_drop_axes)
+        self.df = self._build_df() if catalogue_paths is not None else self._synthesise_df(overlap=overlap)
 
     def __getitem__(self, index: int, force_return_wcs: bool = False) -> np.ndarray:
         """Gets the respective indexed item within the data set. Indexes from the built catalogue data frame.
@@ -386,6 +390,49 @@ class CataData:
                     wcs[field] = self.wcs_preprocessing(wcs[field], field)
             return images, wcs
 
+    def _synthesise_df(self, overlap: float, **kwargs):
+        """Generate a df that samples the images as patches across the frame.
+
+        Args:
+            overlap (float): Fractional overlap between patches or stride size if greater than 1.
+        
+        Returns:
+            pd.DataFrame: Data frame of ra, dec and field.
+        """
+        df = {'ra': [], 'dec': [], 'field': []}
+        # For each iamge
+        if overlap<1.0:
+            overlap_width  = int(self.cutout_width*overlap)
+            overlap_height = int(self.cutout_height*overlap)
+        else:
+            overlap_width  = overlap 
+            overlap_height = overlap
+        stride = (self.cutout_width-overlap_width, self.cutout_height-overlap_height)
+
+        if stride[0] < 1 or stride[1] < 1:
+            raise ValueError(f"Overlap is too large for cutout size. Stride must be greater than 0. Current stride: {stride} with overlap: {overlap} and cutout size: {self.cutout_width}x{self.cutout_height}")
+        if stride[0] > self.cutout_width or stride[1] > self.cutout_height:
+            raise Warning(f"Overlap is too large for cutout size. Stride must be smaller than the cutout size. Current stride: {stride} with overlap: {overlap} and cutout size: {self.cutout_width}x{self.cutout_height}")
+        
+        # Stride across the image and calculate ra+dec for the cutout to store in the table
+        for field in self.field_names:
+            wcs = self.wcs[field]
+            image = self.images[field]
+            x = [self.cutout_width//2]
+            y = [self.cutout_height//2]
+            df['field'] += [field]
+            for i in range(image.shape[-2]//stride[0]):
+                for j in range(image.shape[-1]//stride[1]):
+                    x.append(x[-1]+stride[1])
+                    y.append(y[-1]+stride[0])
+                    df['field'] += [field]
+            # Get ra and dec using wcs
+            ra, dec = wcs.all_pix2world(x, y, self.origin)
+            df['ra'] += ra
+            df['dec'] += dec
+        df = pd.DataFrame(df).dropna()
+        return df
+
     def open_fits(self, path: str, index: int, drop_axes: List[int] = None) -> tuple:
         """Opens fits data.
 
@@ -448,7 +495,7 @@ class CataData:
         Raises:
             ValueError: Data not found and logs which entries are not found through ordered list of booleans.
         """
-        catalogues_exist = self._paths_exist(self.catalogue_paths)
+        catalogues_exist = self._paths_exist(self.catalogue_paths) if self.catalogue_paths is not None else [True]
         images_exist = self._paths_exist(self.image_paths)
         if all(catalogues_exist) and all(images_exist):
             return
@@ -460,11 +507,19 @@ class CataData:
     def _verify_input_lengths(self) -> None:
         """Check that catalogues, images, fits_index_catalogues, fits_index_images,
         fields all have correct lengths in relation to one another."""
+        if self.catalogue_paths is None:
+            if (
+                len(self.image_paths)
+                != len(self.field_names)
+            ):
+                raise ValueError(
+                    f"""Paths and fields must have same number of entries. Currently there are {len(self.image_paths)} image_paths, {len(self.field_names)} field_names. No catalogues provided."""
+                )
+            return
         if (
             len(self.image_paths)
             != len(self.catalogue_paths)
             != len(self.field_names)
-            != len(self.image_paths)
         ):
             raise ValueError(
                 f"""Paths and fields must have same number of entries. Currently there are {len(self.image_paths)} image_paths, {len(self.catalogue_paths)} catalogue_paths, {len(self.field_names)} field_names"""
