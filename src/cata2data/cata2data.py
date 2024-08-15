@@ -418,18 +418,20 @@ class CataData:
         for field in self.field_names:
             wcs = self.wcs[field]
             image = self.images[field]
-            x = [self.cutout_width//2]
-            y = [self.cutout_height//2]
+            x_start = self.cutout_width//2
+            y_start = self.cutout_height//2
+            x = [x_start]
+            y = [y_start]
             df['field'] += [field]
-            for i in range(image.shape[-2]//stride[0]):
-                for j in range(image.shape[-1]//stride[1]):
-                    x.append(x[-1]+stride[1])
-                    y.append(y[-1]+stride[0])
+            for i in range((image.shape[-1]-self.cutout_width)//stride[0]):
+                for j in range((image.shape[-2]-self.cutout_height)//stride[1]):
+                    x.append(x_start+i*stride[0])
+                    y.append(y_start+j*stride[1])
                     df['field'] += [field]
             # Get ra and dec using wcs
-            ra, dec = wcs.all_pix2world(x, y, self.origin)
-            df['ra'] += ra
-            df['dec'] += dec
+            ra, dec = wcs.all_pix2world(y, x, self.origin)
+            df['ra'] += list(ra)
+            df['dec'] += list(dec)
         df = pd.DataFrame(df).dropna()
         return df
 
