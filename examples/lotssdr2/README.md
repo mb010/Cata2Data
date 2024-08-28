@@ -1,10 +1,14 @@
 # LOTSS DR2 Data Class
 
 This folder contains the utilities to produce a full dataloder for LOTSS DR2 using [Cata2Data](https://github.com/mb010/Cata2Data).
-The dataloader was initially developed built for a different project. It serves to highlight how powerfull of a tool [Cata2Data](https://github.com/mb010/Cata2Data) can be.
+The dataloader was initially developed for a different project. It serves to highlight how powerfull of a tool [Cata2Data](https://github.com/mb010/Cata2Data) can be.
 
 # Quick walkthrough:
+To start, create a local clone of this repository and navigate to this directory.
+
 Install various packages required, including cata2data into your local environment (if you arent, you should probably use a [venv](https://docs.python.org/3/library/venv.html)).
+
+To install Cata2Data, activate your virtual environment and run `pip install -e <path/to/Cata2Data/root_dir>`. To install the additional packages required use the `requirements.txt` file located within this directory: `pip install -r requirements.txt`.
 
 ## Download Data
 
@@ -18,7 +22,7 @@ if you want to just download one pointing (instead of all 841 pointings; 434 GB)
 python data_scrapper.py --dir DIRECTORY_TO_SAVE_TO --test
 ```
 
-You will want to download the catalog directly from the website. This dataloader is currently built to work with the [Radio-optical cross match catalog](https://lofar-surveys.org/dr2_release.html#:~:text=Radio%2Doptical%20crossmatch%20catalogue) described in [Hardcastle et al. 2023](https://arxiv.org/abs/2309.00102).
+The `data_scrapper` script will download the image file. Next, you need to download the catalog directly from the website at [this link](https://lofar-surveys.org/public/DR2/catalogues/combined-release-v1.1-LM_opt_mass.fits) (3.9 GB). This dataloader is currently built to work with the [Radio-optical cross match catalog](https://lofar-surveys.org/dr2_release.html#:~:text=Radio%2Doptical%20crossmatch%20catalogue) described in [Hardcastle et al. 2023](https://arxiv.org/abs/2309.00102).
 
 ## Split the Catalog
 
@@ -29,7 +33,7 @@ python catalog_splitter.py --catalog_path PATH_TO_THE_FULL_CATALOG --image_paths
 This will take the full catalog and split it into one catalog per image and save those into the folder where each of those images is stored. This is what Cata2Data currently expects - lists of images and catalogs with equal length to use to construct a dataloader.
 
 ## Construct the dataset
-A number of decisions have been made in the selection of sources etc, but in general everything is in [the data.py file](data.py).
+A number of decisions have been made in the selection of sources etc, but in general everything is in [the data.py file](data.py). To run the code below you can open a Jupyter notebook using the command `jupyter notebook Create_LoTTSDataset.ipynb`.
 
 ```python
 from data import LoTTSDataset
