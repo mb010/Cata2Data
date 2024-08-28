@@ -106,7 +106,7 @@ class PermuteAxes(torch.nn.Module):
         return img
 
 class LoTTS_Preprocessing():
-    def __init__(self, patch_size: Optional(int)=None, scaling: float = 1.2, square: bool=False, cutout_size_name: list=["cutout_height", "cutout_width"]):
+    def __init__(self, patch_size: Optional[int]=None, scaling: float = 1.2, square: bool=False, cutout_size_name: list=["cutout_height", "cutout_width"]):
         self.patch_size = patch_size
         self.scaling = scaling
         self.square = square
