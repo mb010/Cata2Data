@@ -13,11 +13,16 @@ classifiers = [
 ]
 dependencies = [
   "astropy==5.2.1",
+  "beautifulsoup4",
   "matplotlib==3.6.3",
   "numpy==1.24.2",
   "pandas==1.5.3",
   "regions==0.7",
-  "spectral-cube==0.6.0"
+  "requests",
+  "spectral-cube==0.6.0",
+  "tqdm",
+  "torch",
+  "torchvision",
 ]
 description = "Produce a loadable data set from a catalogue"
 dynamic = ["version"]
