@@ -34,6 +34,13 @@ name = "cata2data"
 readme = "README.md"
 requires-python = ">=3.9"
 
+[project.optional-dependencies]
+dev = [
+  "pytest >=6",
+  "pytest-cov >=3",
+  "pre-commit",
+]
+
 [project.urls]
 Source = "https://github.com/mbowles/cata2data"
 
