@@ -5,7 +5,7 @@ from cata2data import collate_fn_irregular_cutouts, collate_fn_regular_cutouts
 
 def test_collate_fn_irregular_cutouts_with_arraylike_y():
     batch = [
-        (np.random.rand(3, 4), np.array([1, 2, 3])),
+        (np.random.rand(1, 2), np.array([1, 2, 3])),
         (np.random.rand(3, 4), np.array([4, 5, 6])),
     ]
     x, y = collate_fn_irregular_cutouts(batch)
@@ -17,7 +17,7 @@ def test_collate_fn_irregular_cutouts_with_arraylike_y():
 
 def test_collate_fn_irregular_cutouts_with_scalar_y():
     batch = [
-        (np.random.rand(3, 4), 1),
+        (np.random.rand(1, 2), 1),
         (np.random.rand(3, 4), 0),
     ]
     x, y = collate_fn_irregular_cutouts(batch)
