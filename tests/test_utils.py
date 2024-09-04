@@ -13,7 +13,7 @@ def test_collate_fn_irregular_cutouts_with_arraylike_y():
     assert isinstance(x, list), "Expected x to be a list."
     assert isinstance(y, torch.Tensor), "Expected y to be a tensor."
     assert len(x) == 2, "Expected x to have length 2."
-    assert y.shape == (6,), "Expected y to be concatenated correctly."
+    assert y.shape == (2, 3), "Expected y to be concatenated correctly."
 
 def test_collate_fn_irregular_cutouts_with_scalar_y():
     batch = [

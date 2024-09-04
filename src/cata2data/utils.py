@@ -8,7 +8,7 @@ def collate_fn_irregular_cutouts(batch):
     x, y = list(zip(*batch))
     # if y is arraylike
     if isinstance(y[0], np.ndarray) or isinstance(y[0], list):
-        y = torch.as_tensor(np.concatenate([target.astype(np.float32) for target in y]))
+        y = torch.as_tensor(np.vstack([target.astype(np.float32) for target in y]))
     else:
         y = torch.as_tensor(y)
     x = [torch.as_tensor(sample) for sample in x]
