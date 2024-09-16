@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+
 def collate_fn_irregular_cutouts(batch):
     if len(batch) == 0:
         return torch.tensor([]), torch.tensor([])
@@ -13,6 +14,7 @@ def collate_fn_irregular_cutouts(batch):
         y = torch.as_tensor(y)
     x = [torch.as_tensor(sample) for sample in x]
     return x, y
+
 
 def collate_fn_regular_cutouts(batch):
     if len(batch) == 0:

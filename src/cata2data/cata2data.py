@@ -119,7 +119,11 @@ class CataData:
 
         self.fill_value = fill_value
         self.images, self.wcs = self._build_images(image_drop_axes)
-        self.df = self._build_df() if catalogue_paths is not None else self._synthesise_df(overlap=overlap)
+        self.df = (
+            self._build_df()
+            if catalogue_paths is not None
+            else self._synthesise_df(overlap=overlap)
+        )
 
     def __getitem__(self, index: int, force_return_wcs: bool = False) -> np.ndarray:
         """Gets the respective indexed item within the data set. Indexes from the built catalogue data frame.
@@ -142,12 +146,18 @@ class CataData:
 
         height, width = self.__get_cutout_size__(index)
         if return_wcs:
-            img, wcs_ = self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
+            img, wcs_ = self.cutout(
+                coords, field=field, height=height, width=width, return_wcs=return_wcs
+            )
         else:
-            img = self.cutout(coords, field=field, height=height, width=width, return_wcs=return_wcs)
+            img = self.cutout(
+                coords, field=field, height=height, width=width, return_wcs=return_wcs
+            )
         if self.transform:
             # NOTE TODO: This should hopefully be a temporary fix so the axes are in the expected order.
-            img = np.transpose(img, (1, 2, 0)) # (C, H, W) -> (H, W, C) which is the expected order for ndarrays
+            img = np.transpose(
+                img, (1, 2, 0)
+            )  # (C, H, W) -> (H, W, C) which is the expected order for ndarrays
             img = self.transform(img)
         if self.targets:
             targets = self.df.iloc[index][self.targets].values
@@ -166,7 +176,7 @@ class CataData:
             int: Data set length.
         """
         return len(self.df)
-    
+
     def __get_cutout_size__(self, index: int) -> tuple:
         """Returns the size of the cutout at the given index.
 
@@ -191,7 +201,12 @@ class CataData:
         return height, width
 
     def cutout(
-        self, coords: np.ndarray, field: Union[str, int], height: int, width: int, return_wcs: bool = False,
+        self,
+        coords: np.ndarray,
+        field: Union[str, int],
+        height: int,
+        width: int,
+        return_wcs: bool = False,
     ) -> Union[tuple, np.ndarray]:
         """Produces a set of images based on the provided
         coordinates and field.
@@ -282,12 +297,12 @@ class CataData:
         """
         if self.spectral_axis:
             raise NotImplementedError
-            
+
         if self.targets:
             cutout, _, wcs = self.__getitem__(index, force_return_wcs=True)
         else:
             cutout, wcs = self.__getitem__(index, force_return_wcs=True)
-            
+
         wcs = wcs[0]  # unpack extract dimension
         cutout = cutout[0]
         if format == "fits":
@@ -297,7 +312,13 @@ class CataData:
         return
 
     def plot(
-        self, index: int, contours: bool = False, sigma_name: str = "ISL_RMS", min_sigma: int = 3, log_scaling: bool = False, title: str = None,
+        self,
+        index: int,
+        contours: bool = False,
+        sigma_name: str = "ISL_RMS",
+        min_sigma: int = 3,
+        log_scaling: bool = False,
+        title: str = None,
     ) -> None:
         """Plot the source with the given index.
 
@@ -314,24 +335,35 @@ class CataData:
         out = self.__getitem__(index, force_return_wcs=True)
         image, wcs = (out[0], out[2]) if self.targets else out
 
-        #image = np.squeeze(image[0])
+        # image = np.squeeze(image[0])
         image = np.squeeze(image)
         wcs = wcs[0]
-        
+
         height, width = self.__get_cutout_size__(index)
         plt.subplot(projection=wcs)
-        plt.imshow(image, origin="lower", cmap="Greys",  norm=colors.LogNorm() if log_scaling else None)
+        plt.imshow(
+            image,
+            origin="lower",
+            cmap="Greys",
+            norm=colors.LogNorm() if log_scaling else None,
+        )
         if title:
             plt.title(title)
         plt.colorbar()
         if contours:
             plt.contour(
                 image,
-                levels=[self.df.iloc[index][sigma_name] * (min_sigma + n) for n in range(3)],
+                levels=[
+                    self.df.iloc[index][sigma_name] * (min_sigma + n) for n in range(3)
+                ],
                 origin="lower",
             )
-        plt.axhline(height // 2, color="red", linewidth=2, ls="--", alpha=crosshair_alpha)
-        plt.axvline(width // 2, color="red", linewidth=2, ls="--", alpha=crosshair_alpha)
+        plt.axhline(
+            height // 2, color="red", linewidth=2, ls="--", alpha=crosshair_alpha
+        )
+        plt.axvline(
+            width // 2, color="red", linewidth=2, ls="--", alpha=crosshair_alpha
+        )
         plt.show()
 
     def _build_df(self) -> pd.DataFrame:
@@ -395,43 +427,50 @@ class CataData:
 
         Args:
             overlap (float): Fractional overlap between patches or stride size if greater than 1.
-        
+
         Returns:
             pd.DataFrame: Data frame of ra, dec and field.
         """
-        df = {'ra': [], 'dec': [], 'field': []}
+        df = {"ra": [], "dec": [], "field": []}
         # For each iamge
-        if overlap<1.0:
-            overlap_width  = int(self.cutout_width*overlap)
-            overlap_height = int(self.cutout_height*overlap)
+        if overlap < 1.0:
+            overlap_width = int(self.cutout_width * overlap)
+            overlap_height = int(self.cutout_height * overlap)
         else:
-            overlap_width  = overlap 
+            overlap_width = overlap
             overlap_height = overlap
-        stride = (self.cutout_width-overlap_width, self.cutout_height-overlap_height)
+        stride = (
+            self.cutout_width - overlap_width,
+            self.cutout_height - overlap_height,
+        )
 
         if stride[0] < 1 or stride[1] < 1:
-            raise ValueError(f"Overlap is too large for cutout size. Stride must be greater than 0. Current stride: {stride} with overlap: {overlap} and cutout size: {self.cutout_width}x{self.cutout_height}")
+            raise ValueError(
+                f"Overlap is too large for cutout size. Stride must be greater than 0. Current stride: {stride} with overlap: {overlap} and cutout size: {self.cutout_width}x{self.cutout_height}"
+            )
         if stride[0] > self.cutout_width or stride[1] > self.cutout_height:
-            raise Warning(f"Overlap is too large for cutout size. Stride must be smaller than the cutout size. Current stride: {stride} with overlap: {overlap} and cutout size: {self.cutout_width}x{self.cutout_height}")
-        
+            raise Warning(
+                f"Overlap is too large for cutout size. Stride must be smaller than the cutout size. Current stride: {stride} with overlap: {overlap} and cutout size: {self.cutout_width}x{self.cutout_height}"
+            )
+
         # Stride across the image and calculate ra+dec for the cutout to store in the table
         for field in self.field_names:
             wcs = self.wcs[field]
             image = self.images[field]
-            x_start = self.cutout_width//2
-            y_start = self.cutout_height//2
+            x_start = self.cutout_width // 2
+            y_start = self.cutout_height // 2
             x = [x_start]
             y = [y_start]
-            df['field'] += [field]
-            for i in range((image.shape[-1]-self.cutout_width)//stride[0]):
-                for j in range((image.shape[-2]-self.cutout_height)//stride[1]):
-                    x.append(x_start+i*stride[0])
-                    y.append(y_start+j*stride[1])
-                    df['field'] += [field]
+            df["field"] += [field]
+            for i in range((image.shape[-1] - self.cutout_width) // stride[0]):
+                for j in range((image.shape[-2] - self.cutout_height) // stride[1]):
+                    x.append(x_start + i * stride[0])
+                    y.append(y_start + j * stride[1])
+                    df["field"] += [field]
             # Get ra and dec using wcs
             ra, dec = wcs.all_pix2world(y, x, self.origin)
-            df['ra'] += list(ra)
-            df['dec'] += list(dec)
+            df["ra"] += list(ra)
+            df["dec"] += list(dec)
         df = pd.DataFrame(df).dropna()
         return df
 
@@ -497,7 +536,11 @@ class CataData:
         Raises:
             ValueError: Data not found and logs which entries are not found through ordered list of booleans.
         """
-        catalogues_exist = self._paths_exist(self.catalogue_paths) if self.catalogue_paths is not None else [True]
+        catalogues_exist = (
+            self._paths_exist(self.catalogue_paths)
+            if self.catalogue_paths is not None
+            else [True]
+        )
         images_exist = self._paths_exist(self.image_paths)
         if all(catalogues_exist) and all(images_exist):
             return
@@ -510,18 +553,13 @@ class CataData:
         """Check that catalogues, images, fits_index_catalogues, fits_index_images,
         fields all have correct lengths in relation to one another."""
         if self.catalogue_paths is None:
-            if (
-                len(self.image_paths)
-                != len(self.field_names)
-            ):
+            if len(self.image_paths) != len(self.field_names):
                 raise ValueError(
                     f"""Paths and fields must have same number of entries. Currently there are {len(self.image_paths)} image_paths, {len(self.field_names)} field_names. No catalogues provided."""
                 )
             return
-        if (
-            len(self.image_paths)
-            != len(self.catalogue_paths)
-            != len(self.field_names)
+        if not (
+            len(self.image_paths) == len(self.catalogue_paths) == len(self.field_names)
         ):
             raise ValueError(
                 f"""Paths and fields must have same number of entries. Currently there are {len(self.image_paths)} image_paths, {len(self.catalogue_paths)} catalogue_paths, {len(self.field_names)} field_names"""

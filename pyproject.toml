@@ -22,7 +22,7 @@ dependencies = [
   "spectral-cube==0.6.0",
   "tqdm",
   "torch",
-  "torchvision",
+  "torchvision"
 ]
 description = "Produce a loadable data set from a catalogue"
 dynamic = ["version"]
@@ -38,7 +38,7 @@ requires-python = ">=3.9"
 dev = [
   "pytest >=6",
   "pytest-cov >=3",
-  "pre-commit",
+  "pre-commit"
 ]
 
 [project.urls]

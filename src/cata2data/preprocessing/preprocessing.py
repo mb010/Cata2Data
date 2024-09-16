@@ -6,6 +6,7 @@ from astropy.wcs import WCS
 from regions import PixCoord, EllipsePixelRegion
 from astropy.coordinates import Angle
 
+
 def image_preprocessing(image: np.ndarray, field: str) -> np.ndarray:
     """Example preprocessing function for basic images.
 
@@ -68,11 +69,7 @@ def catalogue_preprocessing(
     return df.reset_index(drop=True)
 
 
-def ellipse_to_box(
-        major_axis: float, 
-        minor_axis: float, 
-        angle: float
-    ):
+def ellipse_to_box(major_axis: float, minor_axis: float, angle: float):
     """Calculate the size of the smallest rectangle that contains an ellipse defined by width, height and angle.
 
     Args:
@@ -84,22 +81,23 @@ def ellipse_to_box(
         Tuple[int, int]: The size of the smallest rectangle in pixels that contains the ellipse. Height and width.
     """
     reg = EllipsePixelRegion(
-        center=PixCoord(0,0),
+        center=PixCoord(0, 0),
         width=major_axis,
         height=minor_axis,
-        angle=Angle(angle, 'deg')
+        angle=Angle(angle, "deg"),
     )
     return reg.bounding_box.shape
 
+
 def calculate_cutout_size(
-        df, 
-        cutout_size_name: List[str]=["cutout_height", "cutout_width"], 
-        major_axis: str ="Composite_Width", 
-        minor_axis: str ="Composite_Size", 
-        angle: str ="Composite_PA", 
-        scaling: float =1.0, 
-        square: bool =False
-    ):
+    df,
+    cutout_size_name: List[str] = ["cutout_height", "cutout_width"],
+    major_axis: str = "Composite_Width",
+    minor_axis: str = "Composite_Size",
+    angle: str = "Composite_PA",
+    scaling: float = 1.0,
+    square: bool = False,
+):
     """Calculate the cutout size of the source. The cutout size is defined as the size of the smallest rectangle that contains the source defined by the major and minor axis and the position angle of an encapsulating ellipse.
 
     Args:
@@ -118,8 +116,10 @@ def calculate_cutout_size(
     df = df.dropna(subset=[major_axis, minor_axis, angle])
     # Drop zeros
     df = df[(df[major_axis] != 0) & (df[minor_axis] != 0)]
-    sizes = df.apply(lambda x: ellipse_to_box(x[major_axis], x[minor_axis], x[angle]), axis=1)
+    sizes = df.apply(
+        lambda x: ellipse_to_box(x[major_axis], x[minor_axis], x[angle]), axis=1
+    )
     if square:
         sizes = sizes.apply(lambda x: (max(x), max(x)))
-    df[[*cutout_size_name]] = pd.DataFrame(sizes.tolist(), index=df.index)*scaling
+    df[[*cutout_size_name]] = pd.DataFrame(sizes.tolist(), index=df.index) * scaling
     return df[[*cutout_size_name]]
