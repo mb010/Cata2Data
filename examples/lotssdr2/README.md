@@ -1,7 +1,7 @@
 # LOTSS DR2 Data Class
 
 This folder contains the utilities to produce a full dataloder for LOTSS DR2 using [Cata2Data](https://github.com/mb010/Cata2Data).
-The dataloader was initially developed for a different project. It serves to highlight how powerfull of a tool [Cata2Data](https://github.com/mb010/Cata2Data) can be.
+The dataloader was initially developed for a different project. It serves to highlight how powerful of a tool [Cata2Data](https://github.com/mb010/Cata2Data) can be.
 
 # Quick walkthrough:
 To start, create a local clone of this repository and navigate to this directory.
@@ -33,7 +33,7 @@ python catalog_splitter.py --catalog_path PATH_TO_THE_FULL_CATALOG --image_paths
 This will take the full catalog and split it into one catalog per image and save those into the folder where each of those images is stored. This is what Cata2Data currently expects - lists of images and catalogs with equal length to use to construct a dataloader.
 
 ## Construct the dataset
-A number of decisions have been made in the selection of sources etc, but in general everything is in [the data.py file](data.py). To run the code below you can install Jupyter to your environment using `pip install notebook` then open a Jupyter notebook using the command `jupyter notebook Create_LoTTSDataset.ipynb`.
+A number of decisions have been made in the selection of sources etc, but in general everything is in [the data.py file](data.py). To run the code below you can run the `Create_LoTTSDataset.ipynb` notebook in Colab.
 
 ```python
 from data import LoTTSDataset
