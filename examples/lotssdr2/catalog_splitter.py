@@ -87,8 +87,8 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
         "-c",
-        "--catalogue_path",
-        help="Path to the FITS catalogue.",
+        "--catalog_path",
+        help="Path to the FITS catalog.",
         default="data/lotssdr2/combined-release-v1.1-LM_opt_mass.fits",
     )
     argparser.add_argument(
@@ -111,4 +111,4 @@ if __name__ == "__main__":
     else:
         image_paths = args.image_paths.split(",")
     print(image_paths)
-    main(args.catalogue_path, image_paths)
+    main(args.catalog_path, image_paths)
