@@ -8,9 +8,8 @@ import os
 
 def load_catalogue(catalogue_path):
     """Load the FITS catalogue using astropy Table and convert to a pandas DataFrame."""
-    table = Table.read(catalogue_path)
-    df = table.to_pandas()
-    return df
+    table = Table.read(catalogue_path, memmap=True)
+    return table
 
 
 def get_image_wcs_and_data(image_path):
@@ -21,21 +20,18 @@ def get_image_wcs_and_data(image_path):
     return wcs, image_data
 
 
-def save_sub_catalogue(df, output_path, overwrite=True):
+def save_sub_catalogue(table, output_path, overwrite=True):
     """Save the sub-catalogue from a pandas DataFrame to a new FITS file using astropy Table."""
-    table = Table.from_pandas(df)
     table.write(output_path, format="fits", overwrite=overwrite)
 
 
-def filter_objects_by_central_pixel(df, wcs, image_data):
+def filter_objects_by_central_pixel(table, wcs, image_data):
     """Filter objects within the RA and DEC boundaries and valid data regions using pandas."""
-    df = df.dropna(subset=["RA", "DEC"])
-
     # Convert RA and DEC to pixel coordinates
-    x, y = wcs.wcs_world2pix(df["RA"].values, df["DEC"].values, 0)
+    x, y = wcs.wcs_world2pix(table["RA"], table["DEC"], 0)
 
     # Initialize mask with all True values
-    valid_mask = np.ones(len(df), dtype=bool)
+    valid_mask = np.ones(len(table), dtype=bool)
 
     # Check bounds
     valid_mask &= (
@@ -49,21 +45,25 @@ def filter_objects_by_central_pixel(df, wcs, image_data):
     )
 
     # Filter DataFrame
-    valid_df = df[valid_mask]
-    print(f"STRONG FILTER: samples: {valid_df.shape[0]}")
+    valid_table = table[valid_mask]
+    print(f"STRONG FILTER: samples: {len(valid_table)}")
 
-    return valid_df
+    return valid_table
 
 
-def filter_by_mosaic_id(df, image_path):
-    df = df.dropna(subset=["RA", "DEC"])
+def filter_by_mosaic_id(table, image_path):
+    for col in [table["RA"], table["DEC"]]:
+        has_nan = np.zeros(len(table), dtype=bool)
+        if col.info.dtype.kind == "f":
+            has_nan |= np.isnan(col)
+        table = table[~has_nan]
     field_name = os.path.dirname(image_path).split("/")[-1]
-    original_sample_count = df.shape[0]
-    df = df.loc[df["Mosaic_ID"] == field_name.encode("UTF-8")]
+    original_sample_count = len(table)
+    table = table[table["Mosaic_ID"] == field_name.encode("UTF-8")]
     print(
-        f"SIMPLE FILTER: field_name: {field_name}; samples: {df.shape[0]}; original_sample_count: {original_sample_count}; sample_estimate: {int(1/841*original_sample_count)}"
+        f"SIMPLE FILTER: field_name: {field_name}; samples: {len(table)}; original_sample_count: {original_sample_count}; sample_estimate: {int(1/841*original_sample_count)}"
     )
-    return df
+    return table
 
 
 def main(catalogue_path, image_paths):
@@ -87,8 +87,8 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
         "-c",
-        "--catalogue_path",
-        help="Path to the FITS catalogue.",
+        "--catalog_path",
+        help="Path to the FITS catalog.",
         default="data/lotssdr2/combined-release-v1.1-LM_opt_mass.fits",
     )
     argparser.add_argument(
@@ -111,4 +111,4 @@ if __name__ == "__main__":
     else:
         image_paths = args.image_paths.split(",")
     print(image_paths)
-    main(args.catalogue_path, image_paths)
+    main(args.catalog_path, image_paths)
