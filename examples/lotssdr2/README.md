@@ -33,7 +33,7 @@ python catalog_splitter.py --catalog_path PATH_TO_THE_FULL_CATALOG --image_paths
 This will take the full catalog and split it into one catalog per image and save those into the folder where each of those images is stored. This is what Cata2Data currently expects - lists of images and catalogs with equal length to use to construct a dataloader.
 
 ## Construct the dataset
-A number of decisions have been made in the selection of sources etc, but in general everything is in [the data.py file](data.py). To run the code below you can run the `Create_LoTTSDataset.ipynb` notebook in Colab.
+A number of decisions have been made in the selection of sources etc, but in general everything is in [the data.py file](data.py). To run the code below you can run the `Create_LoTTSDataset.ipynb` [notebook in Colab](https://colab.research.google.com/github/mb010/Cata2Data/blob/main/examples/lotssdr2/Create_LoTTSDataset.ipynb).
 
 ```python
 from data import LoTTSDataset
